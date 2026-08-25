@@ -1,0 +1,15 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 5.4.6
+_src_path: https://github.com/epics-containers/deployment-template-argocd
+argocd_cluster: argus
+argocd_server: argocd.diamond.ac.uk
+cluster_name: t11
+cluster_namespace: t11-beamline
+deployment_repo: https://github.com/epics-containers/t11-deployment
+description: t11 simulation beamline Deployment Repository for Argo CD
+domain: t11
+git_platform: github.com
+github_org: epics-containers
+logging_url: https://graylog2.diamond.ac.uk/search?rangetype=relative&fields=message%2Csource&width=1489&highlightMessage=&relative=172800&q=pod_name%3A{service_name}*
+services_release: main
+services_repo: https://github.com/epics-containers/t11-services

@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://github.com/epics-containers/ec-helm-charts/releases/download/5.4.6/argocd-apps.schema.json
+
+# This file configures an ArgoCD app of apps that represent a
+# group of beamline or accelerator IOCs and services. The configuration of the
+# services are in the separate repo indicated by repoURL.
+
+# This repository only controls which services and which versions of those
+# services should be running on the cluster. It is recommended that this repo
+# be updated by a CI/CD pipeline or configuration tools only.
+
+project: t11-beamline
+destination:
+  name: t11
+  namespace: t11-beamline
+source:
+  repoURL: https://github.com/epics-containers/t11-services
+  targetRevision: main
+
+services:
+  # Each item is of the form:
+  #   service: service name as it appears in K8S (statefulset/deployment name)
+  #     targetRevision: optional override for targetRevision above
+  #     repoURL: optional override for git repo to source the helm chart from
+  #            the path is always services/<service> within that repo
+  #     removed: set to true to remove the service from the cluster
+  #     removed: set to true to remove the service from the cluster
+  #     ---- fields for ioc-instance (and other future cooperating charts)
+  #     enabled: set to false to stop a service
+  #     labels: custom labels to apply to the service resources
+  #     values: TBA - custom values to pass to the helm chart when deploying the service
+  #     ----
+
+  t11-epics-pvcs:
+  t11-epics-opis:
+  t11-epics-gateways:

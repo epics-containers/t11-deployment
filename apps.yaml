@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: t11
+  namespace: t11-beamline
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/background
+    - resources-finalizer.argocd.argoproj.io/foreground
+spec:
+  project: t11-beamline
+  destination:
+    name: argus
+    namespace: t11-beamline
+  source:
+    path: apps
+    repoURL: https://github.com/epics-containers/t11-deployment
+    targetRevision: main
+    helm:
+      version: v3
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
