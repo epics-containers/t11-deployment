@@ -10,7 +10,7 @@
 
 project: t11-beamline
 destination:
-  name: t11
+  name: argus
   namespace: t11-beamline
 source:
   repoURL: https://github.com/epics-containers/t11-services
