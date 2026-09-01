@@ -33,12 +33,13 @@ services:
   t11-epics-pvcs:
   t11-epics-opis:
   t11-epics-gateways:
-  t11-blueai:
+  t11-blueapi:
   t11-keycloak:
   t11-numtracker:
   t11-opa:
   t11-rabbitmq:
   t11-tiled:
+
   bl11t-synoptic:
   bl11t-di-cam-01:
   bl11t-ea-test-01:
