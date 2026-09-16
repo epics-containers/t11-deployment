@@ -1,7 +1,8 @@
 # Root app for a test deployment of t11 into your own namespace (issue #3).
 #
-# Copy this file, replace every <...> value, then run:
-#   argocd app create --file apps-test.yaml
+# 1. Copy this file.
+# 2. Replace every value marked "EDIT". Leave everything else as it is.
+# 3. Run:  argocd app create --file apps-test.yaml
 #
 # You do not need to fork this repo: these values live in the Application on
 # the cluster. Fork t11-services only if you change IOCs or other services,
@@ -13,36 +14,39 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: t11
-  namespace: <namespace for Argo CD Applications, usually your namespace>
+  # the root app lives in your namespace, as at DLS
+  namespace: <your-namespace>                         # EDIT
   finalizers:
     - resources-finalizer.argocd.argoproj.io/background
 spec:
-  project: <your Argo CD project>
+  project: <your-argocd-project>                      # EDIT: at DLS usually your namespace
   destination:
-    name: <your cluster, e.g. in-cluster>
-    namespace: <your namespace>
+    name: <your-cluster>                              # EDIT: e.g. argus, or in-cluster
+    # must match metadata.namespace: the child Applications are created here
+    namespace: <your-namespace>                       # EDIT
   source:
     path: apps
     repoURL: https://github.com/epics-containers/t11-deployment
+    # use test-beamline-profile until PR #4 is merged
     targetRevision: main
     helm:
       version: v3
       valuesObject:
-        # the project, cluster and namespace for the child Applications
-        project: <your Argo CD project>
+        # the project, cluster and namespace for the t11 services
+        project: <your-argocd-project>                # EDIT: same as spec.project
         destination:
-          name: <your cluster, e.g. in-cluster>
-          namespace: <your namespace>
+          name: <your-cluster>                        # EDIT: same as spec.destination.name
+          namespace: <your-namespace>                 # EDIT
         source:
           repoURL: https://github.com/epics-containers/t11-services
           targetRevision: main
 
         testBeamline:
           enabled: true
-          # your own uid and gid (see the id command). Leave both unset to
+          # your own uid and gid, from the id command. Delete both lines to
           # keep the production account.
-          uid: <uid>
-          gid: <gid>
+          uid: <your-uid>                             # EDIT: a number
+          gid: <your-gid>                             # EDIT: a number
           teardown:
             # uncomment to use an existing ServiceAccount that can delete
             # PVCs, if you cannot create a Role and RoleBinding

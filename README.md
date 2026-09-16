@@ -14,7 +14,7 @@ argocd app create --file apps.yaml
 `apps-test.yaml` deploys t11 as a test beamline into your own namespace. You
 do not need to fork this repo.
 
-1. Copy `apps-test.yaml` and replace every `<...>` value.
+1. Copy `apps-test.yaml` and replace every value marked `EDIT`.
 1. Run `argocd app create --file apps-test.yaml`.
 1. To tear down, run `argocd app delete t11`.
 
