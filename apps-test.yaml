@@ -39,13 +39,10 @@ spec:
 
         testBeamline:
           enabled: true
-          # your own uid and gid (see the id command)
+          # your own uid and gid (see the id command). Leave both unset to
+          # keep the production account.
           uid: <uid>
           gid: <gid>
-          # uncomment for images with no arm64 variant on a mixed cluster
-          # nodeSelector:
-          #   kubernetes.io/arch: amd64
-          # tolerations: []
           teardown:
             # uncomment to use an existing ServiceAccount that can delete
             # PVCs, if you cannot create a Role and RoleBinding

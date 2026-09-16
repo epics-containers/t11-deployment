@@ -21,16 +21,15 @@ do not need to fork this repo.
 The `testBeamline` values change the test deployment only. The production
 charts in t11-services and ec-helm-charts do not change.
 
-- `uid` and `gid` replace the production account in the IOCs and the gateway.
-- `nodeSelector` and `tolerations` schedule the IOCs, gateway, blueapi and
-  numtracker, e.g. onto amd64 nodes.
+- `uid` and `gid` replace `runAsUser` and `runAsGroup` at each path in
+  `testBeamline.securityContextPaths`, for every service. Add a path when a
+  new chart pins the production account.
 - On teardown, a PostDelete hook deletes the PVCs in the namespace. Argo CD
   would otherwise keep PVCs annotated with `Delete=false`.
 
-`testBeamline.serviceProfiles` in `apps/values.yaml` lists the services that
-get these values. Add an entry when you add a service. Fork t11-services only
-if you change IOCs or other services, and set `valuesObject.source.repoURL`
-to your fork.
+Fork t11-services if you change IOCs or other services, or if your cluster
+needs other settings such as a `nodeSelector`. Then set
+`valuesObject.source.repoURL` to your fork.
 
 ## Adding webhooks
 By default argocd will poll Git repositories for changes to manifests every 3 minutes. In order to have your changes applied to your app more promtly one could:
