@@ -24,12 +24,15 @@ testBeamline:
   # optional: run as this uid:gid instead of the production account
   uid:
   gid:
-  # the values paths where the service charts set runAsUser and runAsGroup.
-  # Add a path when a new chart pins the production account.
+  # the values paths where the service charts set a securityContext. Add a
+  # path when a new chart pins the production account.
+  # container level: gets runAsUser and runAsGroup
   securityContextPaths:
-    # container level in the IOC charts
     - ioc-instance.securityContext
-    # Pod level in the gateway chart
+  # Pod level: also gets fsGroup, so shared volumes are writable by gid
+  podSecurityContextPaths:
+    - ioc-instance.podSecurityContext
+    # the gateway chart renders securityContext at Pod level
     - epics-gateways.securityContext
   # a PostDelete hook deletes the PVCs when you delete the root app
   teardown:

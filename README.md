@@ -22,8 +22,9 @@ The `testBeamline` values change the test deployment only. The production
 charts in t11-services and ec-helm-charts do not change.
 
 - `uid` and `gid` replace `runAsUser` and `runAsGroup` at each path in
-  `testBeamline.securityContextPaths`, for every service. Add a path when a
-  new chart pins the production account.
+  `testBeamline.securityContextPaths` and `podSecurityContextPaths`, for every
+  service. Pod-level paths also get `fsGroup`, so shared volumes are writable
+  by the test gid. Add a path when a new chart pins the production account.
 - On teardown, a PostDelete hook deletes the PVCs in the namespace. Argo CD
   would otherwise keep PVCs annotated with `Delete=false`.
 
