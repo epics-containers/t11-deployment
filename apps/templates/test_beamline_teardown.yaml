@@ -5,6 +5,13 @@ Some charts annotate their PVCs with argocd.argoproj.io/sync-options:
 Delete=false or helm.sh/resource-policy: keep. Argo CD reads those annotations
 from the live PVC, so no Application setting can override them.
 
+The Job deletes only PVCs whose argocd.argoproj.io/tracking-id names one of
+this root app's child apps. A namespace may hold other work, e.g. another
+beamline's PVCs, and the Job keeps those. teardown.pvcSelector narrows the
+PVCs further, and teardown.dryRun logs what would be deleted without deleting.
+Argo CD instances that use label-only resource tracking set no tracking-id,
+so there the Job deletes nothing.
+
 These resources are PostDelete hooks. Argo CD creates them only after it has
 deleted the child Applications and their Pods, so the Job can delete the PVCs
 at once.
@@ -86,19 +93,57 @@ spec:
         runAsGroup: {{ int64 (default 65534 $tb.gid) }}
       containers:
         - name: delete-pvcs
-          image: {{ default "registry.k8s.io/kubectl:v1.34.1" $teardown.image }}
+          # needs a shell as well as kubectl
+          image: {{ default "docker.io/alpine/k8s:1.34.11" $teardown.image }}
+          command: [sh, -c]
           args:
-            - delete
-            - persistentvolumeclaims
-            - --namespace={{ $namespace }}
-            {{- with $teardown.pvcSelector }}
-            - --selector={{ . }}
-            {{- else }}
-            - --all
-            {{- end }}
-            # do not hold up the deletion if a PVC is slow to go
-            - --wait=false
+            - |
+              set -u
+              echo "t11 teardown in namespace $NAMESPACE (dry run: $DRY_RUN)"
+              echo "child apps: $APPS"
+              failed=0
+              # one line per PVC: <name>|<argocd tracking id>
+              kubectl get persistentvolumeclaims --namespace "$NAMESPACE" \
+                  ${SELECTOR:+--selector "$SELECTOR"} \
+                  -o jsonpath='{range .items[*]}{.metadata.name}{"|"}{.metadata.annotations.argocd\.argoproj\.io/tracking-id}{"\n"}{end}' \
+                  > /tmp/pvcs || exit 1
+              while IFS='|' read -r pvc tracking; do
+                [ -n "$pvc" ] || continue
+                owner=""
+                for app in $APPS; do
+                  # Argo CD names the app instance <app>, or <namespace>_<app>
+                  # when the Application is outside its own namespace
+                  for instance in "$app" "${APP_NAMESPACE}_$app"; do
+                    if [ "$tracking" = "$instance:/PersistentVolumeClaim:$NAMESPACE/$pvc" ]; then
+                      owner=$app
+                    fi
+                  done
+                done
+                if [ -z "$owner" ]; then
+                  echo "keep   $pvc (not tracked by a t11 app: '${tracking}')"
+                elif [ "$DRY_RUN" = "true" ]; then
+                  echo "would delete $pvc (tracked by $owner)"
+                else
+                  echo "delete $pvc (tracked by $owner)"
+                  kubectl delete persistentvolumeclaim "$pvc" --namespace "$NAMESPACE" --wait=false || failed=1
+                fi
+              done < /tmp/pvcs
+              # a failed Job would leave the root app stuck in Deleting, so
+              # report failures but still succeed
+              [ "$failed" = 0 ] || echo "WARNING: some PVCs were not deleted, see above"
           env:
+            - name: NAMESPACE
+              value: {{ $namespace | quote }}
+            # the child Applications live in the root app's namespace
+            - name: APP_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            # every service, including removed ones whose kept PVCs remain
+            - name: APPS
+              value: {{ keys (default dict .Values.services) | sortAlpha | join " " | quote }}
+            - name: SELECTOR
+              value: {{ default "" $teardown.pvcSelector | quote }}
+            - name: DRY_RUN
+              value: {{ ternary "true" "false" (eq (toString $teardown.dryRun) "true") | quote }}
             # kubectl writes its cache under HOME
             - name: HOME
               value: /tmp

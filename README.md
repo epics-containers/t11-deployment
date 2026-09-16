@@ -25,8 +25,9 @@ charts in t11-services and ec-helm-charts do not change.
   `testBeamline.securityContextPaths` and `podSecurityContextPaths`, for every
   service. Pod-level paths also get `fsGroup`, so shared volumes are writable
   by the test gid. Add a path when a new chart pins the production account.
-- On teardown, a PostDelete hook deletes the PVCs in the namespace. Argo CD
-  would otherwise keep PVCs annotated with `Delete=false`.
+- On teardown, a PostDelete hook deletes the PVCs that Argo CD kept for the
+  t11 child apps, e.g. those annotated `Delete=false`. It matches them by
+  their Argo CD tracking id, so other PVCs in a shared namespace are kept.
 
 Fork t11-services if you change IOCs or other services, or if your cluster
 needs other settings such as a `nodeSelector`. Then set

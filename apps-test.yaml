@@ -9,7 +9,7 @@
 # then set valuesObject.source.repoURL to your fork.
 #
 # To tear down, delete this Application. A PostDelete hook then deletes the
-# PVCs in the namespace, including those that Argo CD would otherwise keep.
+# PVCs that Argo CD kept for the t11 services. Other PVCs are not touched.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -51,8 +51,8 @@ spec:
             # uncomment to use an existing ServiceAccount that can delete
             # PVCs, if you cannot create a Role and RoleBinding
             # serviceAccountName: default-full-access-mounted
-            # uncomment to delete only matching PVCs, not all in the namespace
-            # pvcSelector: domain=t11
+            # uncomment to log what would be deleted without deleting
+            # dryRun: true
 
         # optional per-service changes, e.g. remove a service
         # services:
