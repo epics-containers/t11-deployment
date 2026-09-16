@@ -5,11 +5,21 @@ Some charts annotate their PVCs with argocd.argoproj.io/sync-options:
 Delete=false or helm.sh/resource-policy: keep. Argo CD reads those annotations
 from the live PVC, so no Application setting can override them.
 
-These resources are PostDelete hooks (Argo CD 2.10 or later). Argo CD creates
-them only after it has deleted the child Applications and their Pods, so the
-Job can delete the PVCs at once. Argo CD removes the hooks when the Job
-succeeds. If the Job fails, Argo CD retries it and the root app stays in
-deletion until the Job succeeds.
+These resources are PostDelete hooks. Argo CD creates them only after it has
+deleted the child Applications and their Pods, so the Job can delete the PVCs
+at once.
+
+Argo CD version notes:
+  - 2.13 or later is required. Earlier releases fail on hooks with no health
+    check, such as the ServiceAccount, Role and RoleBinding.
+  - The Job has hook-delete-policy HookSucceeded, so every release removes it
+    and the next teardown runs again. The RBAC hooks have no policy: before
+    3.3 they stay in the namespace and are reused next time, and from 3.3
+    Argo CD removes them. HookSucceeded on the RBAC hooks can leave the app
+    stuck in Deleting on older releases (argoproj/argo-cd#17191).
+
+If the Job fails, Argo CD retries it and the root app stays in deletion until
+the Job succeeds.
 */ -}}
 {{- $tb := default dict .Values.testBeamline -}}
 {{- $teardown := default dict $tb.teardown -}}
@@ -62,6 +72,7 @@ metadata:
   namespace: {{ $namespace }}
   annotations:
     argocd.argoproj.io/hook: PostDelete
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
 spec:
   # Argo CD creates the RBAC hooks in the same pass, so allow a retry
   backoffLimit: 3

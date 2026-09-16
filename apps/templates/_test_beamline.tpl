@@ -22,6 +22,10 @@ service wins over these values.
 {{- if not (and $tb.uid $tb.gid) -}}
 {{- fail "testBeamline.uid and testBeamline.gid must be set together" -}}
 {{- end -}}
+{{- /* int64 turns a malformed value into 0, i.e. root, so check first */ -}}
+{{- if not (and (include "t11.testBeamline.isPositiveInt" $tb.uid) (include "t11.testBeamline.isPositiveInt" $tb.gid)) -}}
+{{- fail (printf "testBeamline.uid and testBeamline.gid must be positive integers, got %v:%v" $tb.uid $tb.gid) -}}
+{{- end -}}
 {{- $container := dict "runAsUser" (int64 $tb.uid) "runAsGroup" (int64 $tb.gid) -}}
 {{- $pod := merge (dict "fsGroup" (int64 $tb.gid)) $container -}}
 
@@ -45,5 +49,18 @@ service wins over these values.
 {{- $_ := set $settings "valuesObject" $valuesObject -}}
 {{- $_ := set $services $service $settings -}}
 {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- /*
+Renders "true" when the argument is a positive whole number. Values files
+give numbers as float64, which toString can print in exponent form, so
+check numbers and strings separately.
+*/ -}}
+{{- define "t11.testBeamline.isPositiveInt" -}}
+{{- if or (kindIs "float64" .) (kindIs "int64" .) (kindIs "int" .) -}}
+{{- if and (gt (float64 .) 0.0) (eq (float64 .) (floor .)) }}true{{ end -}}
+{{- else if kindIs "string" . -}}
+{{- if regexMatch "^[1-9][0-9]*$" . }}true{{ end -}}
 {{- end -}}
 {{- end -}}
