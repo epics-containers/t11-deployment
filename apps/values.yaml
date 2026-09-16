@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://github.com/epics-containers/ec-helm-charts/releases/download/5.4.6/argocd-apps.schema.json
+# yaml-language-server: $schema=https://github.com/epics-containers/ec-helm-charts/releases/download/5.7.0/argocd-apps.schema.json
 
 # This file configures an ArgoCD app of apps that represent a
 # group of beamline or accelerator IOCs and services. The configuration of the
@@ -15,6 +15,39 @@ destination:
 source:
   repoURL: https://github.com/epics-containers/t11-services
   targetRevision: main
+
+# Opt-in profile for a test deployment of the beamline (issue #3).
+# Leave disabled here. Enable it in the valuesObject of your root app, see
+# apps-test.yaml. See apps/templates/_test_beamline.tpl for how it works.
+testBeamline:
+  enabled: false
+  # run IOCs and gateways as this uid:gid instead of the production account
+  uid:
+  gid:
+  # nodeSelector and tolerations added to Pods of the profiled services,
+  # e.g. kubernetes.io/arch: amd64 for images with no arm64 variant
+  nodeSelector: {}
+  tolerations: []
+  # the profile that applies to each service. A service not listed here gets
+  # no test values. Add an entry for each new service.
+  serviceProfiles:
+    bl11t-synoptic: ioc-instance
+    bl11t-di-cam-01: ioc-instance
+    bl11t-ea-test-01: ioc-instance
+    bl11t-mo-sim-01: ioc-instance
+    t11-epics-gateways: epics-gateways
+    t11-blueapi: blueapi
+    t11-numtracker: numtracker
+  # a PostDelete hook deletes the PVCs when you delete the root app
+  teardown:
+    deletePvcs: true
+    # empty: create a ServiceAccount, Role and RoleBinding for the hook
+    # set: run the hook as this existing ServiceAccount and create no RBAC
+    serviceAccountName: ""
+    # empty: delete all PVCs in the namespace
+    # set: delete only PVCs that match this label selector
+    pvcSelector: ""
+    image: registry.k8s.io/kubectl:v1.34.1
 
 services:
   # Each item is of the form:

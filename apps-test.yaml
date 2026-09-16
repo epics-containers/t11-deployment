@@ -1,0 +1,63 @@
+# Root app for a test deployment of t11 into your own namespace (issue #3).
+#
+# Copy this file, replace every <...> value, then run:
+#   argocd app create --file apps-test.yaml
+#
+# You do not need to fork this repo: these values live in the Application on
+# the cluster. Fork t11-services only if you change IOCs or other services,
+# then set valuesObject.source.repoURL to your fork.
+#
+# To tear down, delete this Application. A PostDelete hook then deletes the
+# PVCs in the namespace, including those that Argo CD would otherwise keep.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: t11
+  namespace: <namespace for Argo CD Applications, usually your namespace>
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/background
+spec:
+  project: <your Argo CD project>
+  destination:
+    name: <your cluster, e.g. in-cluster>
+    namespace: <your namespace>
+  source:
+    path: apps
+    repoURL: https://github.com/epics-containers/t11-deployment
+    targetRevision: main
+    helm:
+      version: v3
+      valuesObject:
+        # the project, cluster and namespace for the child Applications
+        project: <your Argo CD project>
+        destination:
+          name: <your cluster, e.g. in-cluster>
+          namespace: <your namespace>
+        source:
+          repoURL: https://github.com/epics-containers/t11-services
+          targetRevision: main
+
+        testBeamline:
+          enabled: true
+          # your own uid and gid (see the id command)
+          uid: <uid>
+          gid: <gid>
+          # uncomment for images with no arm64 variant on a mixed cluster
+          # nodeSelector:
+          #   kubernetes.io/arch: amd64
+          # tolerations: []
+          teardown:
+            # uncomment to use an existing ServiceAccount that can delete
+            # PVCs, if you cannot create a Role and RoleBinding
+            # serviceAccountName: default-full-access-mounted
+            # uncomment to delete only matching PVCs, not all in the namespace
+            # pvcSelector: domain=t11
+
+        # optional per-service changes, e.g. remove a service
+        # services:
+        #   t11-tiled:
+        #     removed: true
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

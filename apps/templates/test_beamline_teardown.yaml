@@ -1,0 +1,102 @@
+{{- /*
+Teardown for a test beamline (issue #3).
+
+Some charts annotate their PVCs with argocd.argoproj.io/sync-options:
+Delete=false or helm.sh/resource-policy: keep. Argo CD reads those annotations
+from the live PVC, so no Application setting can override them.
+
+These resources are PostDelete hooks (Argo CD 2.10 or later). Argo CD creates
+them only after it has deleted the child Applications and their Pods, so the
+Job can delete the PVCs at once. Argo CD removes the hooks when the Job
+succeeds. If the Job fails, Argo CD retries it and the root app stays in
+deletion until the Job succeeds.
+*/ -}}
+{{- $tb := default dict .Values.testBeamline -}}
+{{- $teardown := default dict $tb.teardown -}}
+{{- if and $tb.enabled $teardown.deletePvcs }}
+{{- $namespace := .Values.destination.namespace | required "destination.namespace is required" }}
+{{- $serviceAccount := default "t11-test-beamline-teardown" $teardown.serviceAccountName }}
+{{- if not $teardown.serviceAccountName }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $serviceAccount }}
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/hook: PostDelete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $serviceAccount }}
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/hook: PostDelete
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $serviceAccount }}
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/hook: PostDelete
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $serviceAccount }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $serviceAccount }}
+    namespace: {{ $namespace }}
+{{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: t11-test-beamline-teardown
+  namespace: {{ $namespace }}
+  annotations:
+    argocd.argoproj.io/hook: PostDelete
+spec:
+  # Argo CD creates the RBAC hooks in the same pass, so allow a retry
+  backoffLimit: 3
+  template:
+    spec:
+      serviceAccountName: {{ $serviceAccount }}
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ int64 (default 65534 $tb.uid) }}
+        runAsGroup: {{ int64 (default 65534 $tb.gid) }}
+      containers:
+        - name: delete-pvcs
+          image: {{ default "registry.k8s.io/kubectl:v1.34.1" $teardown.image }}
+          args:
+            - delete
+            - persistentvolumeclaims
+            - --namespace={{ $namespace }}
+            {{- with $teardown.pvcSelector }}
+            - --selector={{ . }}
+            {{- else }}
+            - --all
+            {{- end }}
+            # do not hold up the deletion if a PVC is slow to go
+            - --wait=false
+          env:
+            # kubectl writes its cache under HOME
+            - name: HOME
+              value: /tmp
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}
