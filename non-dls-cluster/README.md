@@ -34,7 +34,7 @@ Apply this folder before you deploy the test beamline.
 
 To preview the objects first, run `kubectl kustomize non-dls-cluster`.
 
-When you run `make-apps-test.py`, give `--argocd-cluster in-cluster` and your
+When you run `scripts/make-apps-test.py`, give `--argocd-cluster in-cluster` and your
 uid and gid. Then, in `apps-test.local.yaml`, uncomment `services:` and the
 `t11-epics-opis` lines. K3s servicelb serves each LoadBalancer port on every
 node, so the OPI port 80 clashes with an ingress controller. The example sets

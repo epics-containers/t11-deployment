@@ -11,17 +11,18 @@ argocd app create --file apps.yaml
 
 ## Test deployment in your own namespace
 
-`make-apps-test.py` writes a root app that deploys t11 as a test beamline
-into your own namespace. You do not need to fork this repo.
+`scripts/make-apps-test.py` writes a root app that deploys t11 as a test
+beamline into your own namespace. You do not need to fork this repo.
 
 On a cluster outside DLS, first follow
 [non-dls-cluster/README.md](non-dls-cluster/README.md). It adds the
 ServiceAccount that DLS clusters already provide.
 
-1. Run `./make-apps-test.py` and answer the prompts. Press Enter to accept a
-   default. The script needs [uv](https://docs.astral.sh/uv/), which installs
-   its dependencies. Run `./make-apps-test.py --help` to give the values as
-   options instead.
+1. Run `scripts/make-apps-test.py` and answer the prompts. Press Enter to
+   accept a default. The script needs [uv](https://docs.astral.sh/uv/), which
+   installs its dependencies. Run `scripts/make-apps-test.py --help` to give
+   the values as options instead. The script writes `apps-test.local.yaml` in
+   the repo root.
 1. Run `module load <argocd-cluster>`, e.g. `module load argus`.
 1. Run `kubectl apply -n <your-namespace> -f apps-test.local.yaml`.
 1. To tear down, run `kubectl delete -n <your-namespace> application t11`.
@@ -51,6 +52,28 @@ charts in t11-services and ec-helm-charts do not change.
 Fork t11-services if you change IOCs or other services, or if your cluster
 needs other settings such as a `nodeSelector`. Then set
 `valuesObject.source.repoURL` to your fork.
+
+## Open the OPIs
+
+`scripts/opi.sh` runs Phoebus from the `ec-phoebus` container and opens the
+synoptic screen, `bl11t-synoptic/index.bob`. The epics-opis Pod serves this
+file from the OPI PVC, where the synoptic IOC writes it.
+
+1. Point `kubectl` at the cluster, e.g. `module load argus`.
+1. Run `scripts/opi.sh <namespace>`. The namespace defaults to your username.
+
+The script reads the external IPs of the `t11-epics-opis` and
+`t11-epics-gateways` Services, and sets the Phoebus CA and PVA name servers to
+the gateway. It needs podman or docker and an X display. To skip `kubectl`,
+e.g. through an ssh tunnel, set `OPIS=<host:port>` and `GATEWAY=<host>`.
+Arguments after `--` go to Phoebus. Run `scripts/opi.sh --help` for all options.
+
+To try a screen before deploying it, e.g. a synoptic you are editing in a
+t11-services clone, run `scripts/opi.sh --local synoptic/index.bob <namespace>`.
+The file's folder is mounted into the container at the same path, and PVs
+still come from the cluster gateway. Links that climb out of that folder, such
+as the synoptic's `../bl11t-<ioc>/index.bob` links to IOC screens, only work
+from the served copy.
 
 ## Adding webhooks
 By default argocd will poll Git repositories for changes to manifests every 3 minutes. In order to have your changes applied to your app more promtly one could:

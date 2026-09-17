@@ -20,7 +20,8 @@ import jinja2
 import typer
 import yaml
 
-HERE = Path(__file__).resolve().parent
+# the template and the output live at the repo root, above scripts/
+HERE = Path(__file__).resolve().parent.parent
 TEMPLATE = "apps-test.template.yaml"
 
 HEADER = """\
