@@ -25,10 +25,10 @@ Argo CD version notes:
     Argo CD removes them. HookSucceeded on the RBAC hooks can leave the app
     stuck in Deleting on older releases (argoproj/argo-cd#17191).
 
-A failed PVC delete is logged, and the Job still succeeds, so the root app
-does not stay stuck in Deleting. Only a failure to list the PVCs fails the
-Job: Argo CD then retries it and the root app stays in deletion until the
-Job succeeds.
+The Job tries each PVC delete three times. A PVC that still fails is logged,
+and the Job still succeeds, so the root app does not stay stuck in Deleting.
+Only a failure to list the PVCs fails the Job: Argo CD then retries it and
+the root app stays in deletion until the Job succeeds.
 */ -}}
 {{- $tb := default dict .Values.testBeamline -}}
 {{- $teardown := default dict $tb.teardown -}}
@@ -127,7 +127,16 @@ spec:
                   echo "would delete $pvc (tracked by $owner)"
                 else
                   echo "delete $pvc (tracked by $owner)"
-                  kubectl delete persistentvolumeclaim "$pvc" --namespace "$NAMESPACE" --wait=false || failed=1
+                  # retry a transient API failure before the PVC counts as failed
+                  for attempt in 1 2 3; do
+                    kubectl delete persistentvolumeclaim "$pvc" --namespace "$NAMESPACE" \
+                        --wait=false --ignore-not-found && break
+                    if [ "$attempt" = 3 ]; then
+                      failed=1
+                    else
+                      sleep 5
+                    fi
+                  done
                 fi
               done < /tmp/pvcs
               # a failed Job would leave the root app stuck in Deleting, so
