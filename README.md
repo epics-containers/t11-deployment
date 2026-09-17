@@ -77,6 +77,33 @@ still come from the cluster gateway. Links that climb out of that folder, such
 as the synoptic's `../bl11t-<ioc>/index.bob` links to IOC screens, only work
 from the served copy.
 
+## Use caget and pvget
+
+`scripts/epics-env.sh` points the EPICS clients in your shell, such as `caget`,
+`camonitor`, `pvget` and `pvmonitor`, at the t11 gateway instead of broadcast
+discovery. Source it from bash or zsh:
+
+```
+. scripts/epics-env.sh <namespace>
+caget BL11T-DI-CAM-01:HEARTBEAT
+. scripts/epics-env.sh --unset
+```
+
+The namespace defaults to your username. The script sets
+`EPICS_CA_NAME_SERVERS` and `EPICS_PVA_NAME_SERVERS` to the gateway's CA (9064)
+and PVA (9075) ports, sets `EPICS_CA_AUTO_ADDR_LIST` and
+`EPICS_PVA_AUTO_ADDR_LIST` to `NO`, and empties `EPICS_CA_ADDR_LIST` and
+`EPICS_PVA_ADDR_LIST`. `--unset` unsets them all, back to normal discovery.
+An error never exits your shell or changes its options.
+
+Run on its own, the script only prints the `export` lines, so
+`eval "$(scripts/epics-env.sh <namespace>)"` works too.
+
+`scripts/gateway.sh <namespace>` prints the gateway endpoints, e.g.
+`CA 192.168.1.82:9064` and `PVA 192.168.1.82:9075`. Both scripts read the
+`t11-epics-gateways` Service with `kubectl`. To skip `kubectl`, e.g. through an
+ssh tunnel, set `GATEWAY=<host>`.
+
 ## Adding webhooks
 By default argocd will poll Git repositories for changes to manifests every 3 minutes. In order to have your changes applied to your app more promtly one could:
 - Trigger a refresh using the cli or web UI

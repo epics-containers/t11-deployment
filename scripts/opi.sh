@@ -22,9 +22,13 @@ set -euo pipefail
 
 image=${IMAGE:-ghcr.io/epics-containers/ec-phoebus:latest}
 
+t11_prog=opi.sh
+t11_env_hint="OPIS and GATEWAY"
+# shellcheck source-path=SCRIPTDIR source=lib/cluster.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/cluster.sh"
+
 die() {
-    echo "opi.sh: $*" >&2
-    exit 1
+    t11_error "$@" || exit 1
 }
 
 usage() {
@@ -108,38 +112,8 @@ if [[ -n $local_file ]]; then
     local_dir=$(dirname "$local_file")
 fi
 
-# fail early, with a clear message, when kubectl cannot read the Services
-check_cluster() {
-    command -v kubectl >/dev/null ||
-        die "kubectl is not installed. Install it, or set OPIS and GATEWAY."
-
-    local context
-    context=$(kubectl config current-context 2>/dev/null) ||
-        die "kubectl has no current context. Point it at the cluster first, e.g. 'module load argus'."
-
-    # can-i prints yes or no when the cluster answers, and an error when not
-    local out
-    out=$(kubectl auth can-i get services -n "$namespace" --request-timeout=5s 2>&1) || true
-    if grep -qx no <<<"$out"; then
-        die "context '$context' cannot read Services in namespace '$namespace'. Check the namespace name and your access."
-    elif ! grep -qx yes <<<"$out"; then
-        die "cannot reach the cluster for context '$context'. Check the VPN or tunnel, and log in again if your token has expired.
-kubectl said: $(tail -n 1 <<<"$out")"
-    fi
-
-    local service
-    for service in "$@"; do
-        kubectl get service "$service" -n "$namespace" >/dev/null 2>&1 ||
-            die "no Service '$service' in namespace '$namespace' (context '$context'). Is the t11 test beamline deployed there?"
-    done
-}
-
-# the first external address of a LoadBalancer Service
-external_ip() {
-    kubectl get service "$1" -n "$namespace" -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-}
-
-# the Services still to look up with kubectl
+# the Services still to look up with kubectl, checked together so that every
+# missing Service is reported before any lookup
 services=()
 if [[ -z $local_file && -z ${OPIS:-} ]]; then
     services+=(t11-epics-opis)
@@ -148,20 +122,16 @@ if [[ -z ${GATEWAY:-} ]]; then
     services+=(t11-epics-gateways)
 fi
 if ((${#services[@]})); then
-    check_cluster "${services[@]}"
+    t11_check_cluster "$namespace" "${services[@]}" || exit 1
 fi
 
-if [[ -z $local_file && -z ${OPIS:-} ]]; then
-    ip=$(external_ip t11-epics-opis)
-    port=$(kubectl get service t11-epics-opis -n "$namespace" -o jsonpath='{.spec.ports[0].port}')
-    [[ -n $ip ]] || die "t11-epics-opis in namespace '$namespace' has no external IP yet"
-    OPIS=$ip:$port
+if [[ -z $local_file ]]; then
+    t11_opis_endpoint "$namespace" || exit 1
+    OPIS=$t11_opis
 fi
 
-if [[ -z ${GATEWAY:-} ]]; then
-    GATEWAY=$(external_ip t11-epics-gateways)
-    [[ -n $GATEWAY ]] || die "t11-epics-gateways in namespace '$namespace' has no external IP yet"
-fi
+t11_gateway_host "$namespace" || exit 1
+GATEWAY=$t11_gateway
 
 if command -v podman >/dev/null; then
     runtime=podman
@@ -178,9 +148,9 @@ settings_dir=$(mktemp -d)
 trap 'rm -rf "$settings_dir"' EXIT
 cat >"$settings_dir/settings.ini" <<EOF
 org.csstudio.display.builder.representation.javafx/pick_on_bounds=true
-org.phoebus.pv.ca/name_servers=$GATEWAY:9064
+org.phoebus.pv.ca/name_servers=$GATEWAY:$t11_ca_port
 org.phoebus.pv.ca/auto_addr_list=false
-org.phoebus.pv.pva/epics_pva_name_servers=$GATEWAY:9075
+org.phoebus.pv.pva/epics_pva_name_servers=$GATEWAY:$t11_pva_port
 org.phoebus.pv.pva/epics_pva_auto_addr_list=false
 EOF
 
