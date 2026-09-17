@@ -16,13 +16,13 @@ items when they are done.
 - t11-deployment #11 and #14: Sphinx scaffolding in `docs/`, `scripts/`
   (`make-apps-test.py`, `opi.sh`, `docs.sh`) and a README link to the docs.
 - t11-services #15: a first synoptic `index.bob` with status PVs.
+- t11-deployment #16: `. scripts/epics-env.sh <namespace>` points `caget` and
+  `pvget` at the cluster gateway, and `--unset` reverts. `scripts/gateway.sh`
+  prints the endpoints, and `scripts/lib/cluster.sh` holds the shared lookups.
+  The user confirmed that it works.
 
 ## In progress
 
-- **`scripts/epics-env.sh` (t11-deployment branch `epics-env-script`):** sets
-  the CA and PVA name servers to the cluster gateway for `caget` and `pvget`,
-  with a shared `scripts/lib/cluster.sh` and a `scripts/gateway.sh`. A PR was
-  being opened on the evening of 2026-09-17. Check its state.
 - **Synoptic, i19 style (t11-services branch `synoptic-main-screen`):**
   rebased on main 85e6822, commits 2a16733 and 5452c11. No PR is open yet.
   - Both clusters deploy the synoptic from this branch through a root app
