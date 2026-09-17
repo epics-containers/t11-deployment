@@ -34,6 +34,11 @@ suit DLS:
 - The Argo CD cluster and the target cluster are both `argus`.
 - `uid` and `gid` are your own, from the `id` command.
 
+On a cluster outside DLS, answer yes when the script asks, or give
+`--non-dls`. The Argo CD cluster and the target cluster then default to
+`in-cluster`, and the script sets the OPI port, 8080 by default. Give
+`--opi-port` to change it.
+
 Git ignores `apps-test.local.yaml`. Edit it to set the optional values, such as
 `teardown.dryRun` or per-service changes.
 
