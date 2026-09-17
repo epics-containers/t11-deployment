@@ -56,11 +56,11 @@ spec:
           # uncomment teardown and the settings you need. An empty
           # teardown is null, which removes the chart defaults and the hook.
           # teardown:
-            # uncomment to use an existing ServiceAccount that can delete
-            # PVCs, if you cannot create a Role and RoleBinding
-            # serviceAccountName: default-full-access-mounted
-            # uncomment to log what would be deleted without deleting
-            # dryRun: true
+          #   # use an existing ServiceAccount that can delete PVCs, if you
+          #   # cannot create a Role and RoleBinding
+          #   serviceAccountName: default-full-access-mounted
+          #   # log what would be deleted without deleting
+          #   dryRun: true
 
         # optional per-service changes, e.g. remove a service
         # services:
