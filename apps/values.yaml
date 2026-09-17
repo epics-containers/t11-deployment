@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://github.com/epics-containers/ec-helm-charts/releases/download/5.4.6/argocd-apps.schema.json
+# yaml-language-server: $schema=https://github.com/epics-containers/ec-helm-charts/releases/download/5.7.0/argocd-apps.schema.json
 
 # This file configures an ArgoCD app of apps that represent a
 # group of beamline or accelerator IOCs and services. The configuration of the
@@ -15,6 +15,38 @@ destination:
 source:
   repoURL: https://github.com/epics-containers/t11-services
   targetRevision: main
+
+# Opt-in profile for a test deployment of the beamline (issue #3).
+# Leave disabled here. Enable it in the valuesObject of your root app, see
+# apps-test.yaml. See apps/templates/_test_beamline.tpl for how it works.
+testBeamline:
+  enabled: false
+  # optional: run as this uid:gid instead of the production account
+  uid:
+  gid:
+  # the values paths where the service charts set a securityContext. Add a
+  # path when a new chart pins the production account.
+  # container level: gets runAsUser and runAsGroup
+  securityContextPaths:
+    - ioc-instance.securityContext
+  # Pod level: also gets fsGroup, so shared volumes are writable by gid
+  podSecurityContextPaths:
+    - ioc-instance.podSecurityContext
+    # the gateway chart renders securityContext at Pod level
+    - epics-gateways.securityContext
+  # when you delete the root app, a PostDelete hook deletes the PVCs that
+  # Argo CD kept for its child apps. Other PVCs in the namespace are kept.
+  teardown:
+    deletePvcs: true
+    # true: log what would be deleted, delete nothing
+    dryRun: false
+    # empty: create a ServiceAccount, Role and RoleBinding for the hook
+    # set: run the hook as this existing ServiceAccount and create no RBAC
+    serviceAccountName: ""
+    # optional label selector that narrows the PVCs considered
+    pvcSelector: ""
+    # needs a shell as well as kubectl
+    image: docker.io/alpine/k8s:1.34.11
 
 services:
   # Each item is of the form:

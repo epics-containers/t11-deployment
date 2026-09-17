@@ -1,1 +1,2 @@
+{{- include "t11.testBeamline.apply" . -}}
 {{- include "ec-helm-charts.argocd-apps" . -}}

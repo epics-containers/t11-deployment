@@ -7,3 +7,6 @@ venv*
 **/charts
 **/*copy
 *.code-workspace
+
+# written by make-apps-test.py
+*.local.yaml
