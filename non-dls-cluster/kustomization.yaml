@@ -11,4 +11,3 @@ namespace: t11-beamline
 
 resources:
   - service-account.yaml
-  - scheduling-policy.yaml
