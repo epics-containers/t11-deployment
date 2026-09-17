@@ -11,12 +11,27 @@ argocd app create --file apps.yaml
 
 ## Test deployment in your own namespace
 
-`apps-test.yaml` deploys t11 as a test beamline into your own namespace. You
-do not need to fork this repo.
+`make-apps-test.py` writes a root app that deploys t11 as a test beamline
+into your own namespace. You do not need to fork this repo.
 
-1. Copy `apps-test.yaml` and replace every value marked `EDIT`.
-1. Run `argocd app create --file apps-test.yaml`.
-1. To tear down, run `argocd app delete t11`.
+1. Run `./make-apps-test.py` and answer the prompts. Press Enter to accept a
+   default. The script needs [uv](https://docs.astral.sh/uv/), which installs
+   its dependencies. Run `./make-apps-test.py --help` to give the values as
+   options instead.
+1. Run `module load <argocd-cluster>`, e.g. `module load argus`.
+1. Run `kubectl apply -n <your-namespace> -f apps-test.local.yaml`.
+1. To tear down, run `kubectl delete -n <your-namespace> application t11`.
+
+The script fills the Jinja2 template `apps-test.template.yaml`. The defaults
+suit DLS:
+
+- The namespace is your username. The Argo CD project, the root app and the
+  t11 services all use this namespace.
+- The Argo CD cluster and the target cluster are both `argus`.
+- `uid` and `gid` are your own, from the `id` command.
+
+Git ignores `apps-test.local.yaml`. Edit it to set the optional values, such as
+`teardown.dryRun` or per-service changes.
 
 The `testBeamline` values change the test deployment only. The production
 charts in t11-services and ec-helm-charts do not change.
