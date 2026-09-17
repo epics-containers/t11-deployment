@@ -53,7 +53,9 @@ spec:
           # both lines to keep the production account.
           uid: "{{ uid }}"
           gid: "{{ gid }}"
-          teardown:
+          # uncomment teardown and the settings you need. An empty
+          # teardown is null, which removes the chart defaults and the hook.
+          # teardown:
             # uncomment to use an existing ServiceAccount that can delete
             # PVCs, if you cannot create a Role and RoleBinding
             # serviceAccountName: default-full-access-mounted
