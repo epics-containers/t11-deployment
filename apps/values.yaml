@@ -46,7 +46,7 @@ testBeamline:
     # optional label selector that narrows the PVCs considered
     pvcSelector: ""
     # needs a shell as well as kubectl
-    image: docker.io/alpine/k8s:1.34.11
+    image: docker.io/alpine/k8s:1.37.0
 
 services:
   # Each item is of the form:
