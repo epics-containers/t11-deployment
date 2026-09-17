@@ -14,6 +14,10 @@ argocd app create --file apps.yaml
 `make-apps-test.py` writes a root app that deploys t11 as a test beamline
 into your own namespace. You do not need to fork this repo.
 
+On a cluster outside DLS, first follow
+[non-dls-cluster/README.md](non-dls-cluster/README.md). It adds the
+ServiceAccount that DLS clusters already provide.
+
 1. Run `./make-apps-test.py` and answer the prompts. Press Enter to accept a
    default. The script needs [uv](https://docs.astral.sh/uv/), which installs
    its dependencies. Run `./make-apps-test.py --help` to give the values as

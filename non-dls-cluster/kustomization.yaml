@@ -1,0 +1,13 @@
+# Adds what a DLS cluster already provides to the namespace of a t11 test
+# beamline on a non-DLS cluster. See README.md.
+#
+# Set the namespace here, then run: kubectl apply -k non-dls-cluster
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# the namespace of your t11 test beamline. Kustomize sets it on every object
+# and on the RoleBinding subject.
+namespace: t11-beamline
+
+resources:
+  - service-account.yaml
