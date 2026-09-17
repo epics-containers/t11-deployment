@@ -27,7 +27,8 @@ spec:
   source:
     path: apps
     repoURL: https://github.com/epics-containers/t11-deployment
-    # use test-beamline-profile until PR #4 is merged
+    # main has no test beamline profile until PR #4 is merged: until then
+    # set targetRevision to test-beamline-profile
     targetRevision: main
     helm:
       version: v3
