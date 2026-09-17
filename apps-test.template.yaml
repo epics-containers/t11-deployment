@@ -7,10 +7,7 @@
 #   kubectl apply -n <namespace> -f apps-test.local.yaml
 #
 # This Jinja2 template is also valid YAML, because every expression is inside
-# a quoted string. YAML would read a bare expression as a mapping. A line
-# that starts with #% is a Jinja2 statement, which YAML reads as a comment.
-# The filter statement replaces the example port 8080 with your port, which
-# must stay a bare integer.
+# a quoted string. YAML would read a bare expression as a mapping.
 #
 # You do not need to fork this repo: these values live in the Application on
 # the cluster. Fork t11-services only if you change IOCs or other services,
@@ -65,26 +62,17 @@ spec:
             # uncomment to log what would be deleted without deleting
             # dryRun: true
 
-        #% if non_dls
-        # per-service changes, e.g. remove a service
-        services:
-          t11-epics-opis:
-            valuesObject:
-              service:
-                # the OPI chart serves on service.port, default 80. K3s
-                # servicelb serves each LoadBalancer port as a hostPort on
-                # every node, so port 80 clashes with an ingress controller.
-                #% filter replace("8080", opi_port)
-                port: 8080
-                #% endfilter
-          # t11-tiled:
-          #   removed: true
-        #% else
         # optional per-service changes, e.g. remove a service
         # services:
         #   t11-tiled:
         #     removed: true
-        #% endif
+        #   # outside DLS: K3s servicelb serves each LoadBalancer port on every
+        #   # node, so the OPI port 80 clashes with an ingress controller.
+        #   # Uncomment services: and these lines to use another port.
+        #   t11-epics-opis:
+        #     valuesObject:
+        #       service:
+        #         port: 8080
   syncPolicy:
     automated:
       prune: true

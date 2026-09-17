@@ -48,11 +48,11 @@ Pods only when they are created.
 
 To preview the objects first, run `kubectl kustomize non-dls-cluster`.
 
-Then answer yes when `make-apps-test.py` asks whether the cluster is outside
-DLS. The script sets the port of the OPI Service, 8080 by default. K3s
-servicelb serves each LoadBalancer port on every node, so the default port 80
-clashes with an ingress controller. Open the OPIs at
-`http://<node-ip>:<opi-port>`.
+When you run `make-apps-test.py`, give `--argocd-cluster in-cluster` and your
+uid and gid. Then, in `apps-test.local.yaml`, uncomment `services:` and the
+`t11-epics-opis` lines. K3s servicelb serves each LoadBalancer port on every
+node, so the OPI port 80 clashes with an ingress controller. The example sets
+port 8080. Open the OPIs at `http://<node-ip>:8080`.
 
 ## Verify
 
