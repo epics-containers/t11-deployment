@@ -30,7 +30,9 @@ items when they are done.
   relative, and t11-blueapi moved to `dodal.beamlines.t11` on the dodal `t11`
   branch. It also carried the last synoptic commits.
 - t11-services #17: epics-gateways 2026.9.3 with `restartOnNewIocs`, whose
-  `ioc-watcher` sidecar restarts the gateways when an IOC becomes Ready.
+  `ioc-watcher` sidecar restarts the gateways when an IOC Service is created
+  after the gateway containers started. A restarted IOC keeps its Service, so
+  it needs no gateway restart.
   #16, the duplicate Renovate bump, is closed. #21 moved the login sidecar to
   nginx 1.31.
 - t11-deployment #18: a devcontainer. #19: `scripts/urls.sh`, which prints
