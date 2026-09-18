@@ -47,6 +47,22 @@ testBeamline:
     pvcSelector: ""
     # needs a shell as well as kubectl
     image: docker.io/alpine/k8s:1.34.11
+  # delete the root app, and so the whole test beamline, when none of its
+  # apps has changed for idleHours. apps-test.template.yaml turns it on; set
+  # enabled: false in your root app to keep a test beamline. It never runs in
+  # t11-beamline. See apps/templates/test_beamline_idle_teardown.yaml.
+  idleTeardown:
+    enabled: false
+    idleHours: 24
+    # when to check, as a CronJob schedule
+    schedule: "7 * * * *"
+    # true: log the decision, delete nothing
+    dryRun: false
+    # empty: create a ServiceAccount, Role and RoleBinding for the CronJob
+    # set: run it as this existing ServiceAccount and create no RBAC
+    serviceAccountName: ""
+    # needs a shell as well as kubectl
+    image: docker.io/alpine/k8s:1.34.11
 
 services:
   # Each item is of the form:
