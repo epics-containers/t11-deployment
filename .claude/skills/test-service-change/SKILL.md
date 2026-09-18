@@ -83,9 +83,12 @@ Every change to a t11 service follows these steps, in order.
 - **Per-CPU workers:** images such as nginx start a worker per node CPU, over
   100 on DLS nodes, and are OOMKilled under a small memory limit. Set
   `worker_processes 1` or the equivalent.
-- **Unset resources** take the LimitRange default of 1 CPU, which counts
-  against the 10 CPU namespace quota. Give every container, sidecar and Job
-  explicit requests and limits.
+- **Unset resources** take the LimitRange default of 1 CPU / 4Gi, which
+  counts against the 10 CPU `limits.cpu` quota of a personal namespace. The
+  full beamline already uses about 7.45 CPU. Give every container, sidecar
+  and Job explicit requests and limits. The quota counts a Pod as the larger
+  of its biggest init container and the sum of its containers, and the
+  LimitRange allows at most 2Gi of ephemeral storage per container.
 
 ## Testing a browser flow
 

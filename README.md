@@ -85,6 +85,46 @@ still come from the cluster gateway. Links that climb out of that folder, such
 as the synoptic's `../bl11t-<ioc>/index.bob` links to IOC screens, only work
 from the served copy.
 
+## Run plans with the blueapi CLI
+
+`scripts/blueapi.sh` runs the blueapi CLI from the image that the beamline's
+blueapi runs, so the CLI and server versions match. Arguments after `--` go to
+blueapi.
+
+1. Point `kubectl` at the cluster, e.g. `module load argus`.
+1. Run `scripts/blueapi.sh <namespace> -- login`, open the link it prints, and
+   log in as `alice/alice`. The login is cached in
+   `~/.cache/t11-blueapi/<namespace>`.
+1. Run a plan, e.g.
+   `scripts/blueapi.sh <namespace> -- controller run --ws -i cm12345-1 count '{"detectors":["det"],"num":5}'`.
+
+Every token names `t11-keycloak:8080` as its issuer, which only resolves in
+the cluster, so the container maps that name to the external IP of the
+`t11-keycloak` Service, and the script rewrites the login link to that IP.
+`controller run` needs `--ws` to follow a plan to the end, because the message
+bus is not published outside the cluster; `--bg` starts a plan and returns.
+The script needs podman or docker. To skip `kubectl`, set
+`BLUEAPI=<host[:port]>`, `KEYCLOAK=<ip>` and `IMAGE=<blueapi image>`.
+
+## Smoke test a beamline
+
+`scripts/smoke-test.sh <namespace>` checks that a test beamline works end to
+end. Run it straight after applying the root app, even to an empty namespace:
+
+```sh
+kubectl apply -f apps-test.local.yaml && scripts/smoke-test.sh
+```
+
+It waits for the root app and every child app to be Synced and Healthy, for
+every pod to be Ready, and for any gateway restart that `restartOnNewIocs`
+has still to make. Then it reads a PV from each IOC through the gateway over
+CA and PVA, runs `count` on `det` in `cm12345-1` through the blueapi
+oauth2-proxy, and checks that the task has no errors and that tiled has the
+run with exit status success. It logs in as the `system-test-blueapi-alice`
+service account, so it needs no browser. It exits 0 only when every check
+passes. Run `scripts/smoke-test.sh --help` for the options, e.g. `--no-wait`
+for a beamline that is already up.
+
 ## Use caget and pvget
 
 `scripts/epics-env.sh` points the EPICS clients in your shell, such as `caget`,

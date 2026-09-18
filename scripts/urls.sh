@@ -96,6 +96,7 @@ found=0
 # over both TCP and UDP
 seen=" "
 
+t11_note "listing the Services and Ingresses in namespace '$namespace'"
 services=$(kubectl get services -n "$namespace" -o go-template="$service_template")
 while IFS='|' read -r name type lb external port_name port app_protocol; do
     # a metrics endpoint is not a service for people, e.g. oauth2-proxy's
