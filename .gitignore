@@ -10,3 +10,6 @@ venv*
 
 # written by make-apps-test.py
 *.local.yaml
+
+# git worktrees for branches in progress
+.claude/worktrees/

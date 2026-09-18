@@ -50,6 +50,14 @@ charts in t11-services and ec-helm-charts do not change.
 - On teardown, a PostDelete hook deletes the PVCs that Argo CD kept for the
   t11 child apps, e.g. those annotated `Delete=false`. It matches them by
   their Argo CD tracking id, so other PVCs in a shared namespace are kept.
+- A test beamline tears itself down when idle. A CronJob checks every hour
+  when an app of the beamline last synced, and after
+  `testBeamline.idleTeardown.idleHours` (24) with no change it deletes the
+  root app, which starts the teardown above. Applying a changed root app or
+  pushing to a tracked branch counts as a change. To keep a test beamline, set
+  `idleTeardown.enabled: false` in your root app. `idleTeardown.dryRun` logs
+  the decision without deleting. The reference beamline in `t11-beamline`
+  never runs it.
 
 Fork t11-services if you change IOCs or other services, or if your cluster
 needs other settings such as a `nodeSelector`. Then set

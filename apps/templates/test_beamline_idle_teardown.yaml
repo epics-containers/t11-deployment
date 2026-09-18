@@ -1,0 +1,172 @@
+{{- /*
+Idle teardown for a test beamline.
+
+A test beamline lives in a personal namespace and is easy to forget. When
+testBeamline.idleTeardown.enabled is true, a CronJob checks every hour when an
+app of this beamline last changed. After idleTeardown.idleHours with no change
+it deletes the root app. That starts the usual teardown: Argo CD deletes the
+child apps and their resources, this CronJob included, and the PostDelete hook
+in test_beamline_teardown.yaml deletes the kept PVCs.
+
+A change is an Argo CD sync of the root app or of one of its child apps: the
+newest of each app's operationState.startedAt and finishedAt and its history
+deployedAt times. Applying a changed root app, pushing to a branch that an app
+tracks, and a self-heal all count. Opening a UI or reading PVs does not.
+
+The CronJob never renders in the reference namespace t11-beamline, whatever
+the values say. apps.yaml also sets idleTeardown.enabled to false.
+
+idleTeardown.dryRun logs the decision and whether the ServiceAccount may
+delete the root app, and deletes nothing.
+*/ -}}
+{{- $tb := default dict .Values.testBeamline -}}
+{{- $idle := default dict $tb.idleTeardown -}}
+{{- $namespace := .Values.destination.namespace | required "destination.namespace is required" -}}
+{{- if and $tb.enabled $idle.enabled (ne $namespace "t11-beamline") }}
+{{- $name := "t11-test-beamline-idle-teardown" }}
+{{- $serviceAccount := default $name $idle.serviceAccountName }}
+{{- if not $idle.serviceAccountName }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $serviceAccount }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $serviceAccount }}
+  namespace: {{ .Release.Namespace }}
+rules:
+  # read every Application, to find this beamline's last change
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["get", "list"]
+  # delete only the root app
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    resourceNames: [{{ .Release.Name | quote }}]
+    verbs: ["delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $serviceAccount }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $serviceAccount }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $serviceAccount }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: {{ default "7 * * * *" $idle.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 300
+      template:
+        spec:
+          serviceAccountName: {{ $serviceAccount }}
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: {{ int64 (default 65534 $tb.uid) }}
+            runAsGroup: {{ int64 (default 65534 $tb.gid) }}
+          containers:
+            - name: idle-teardown
+              # needs a shell as well as kubectl
+              image: {{ default "docker.io/alpine/k8s:1.34.11" $idle.image }}
+              command: [sh, -c]
+              args:
+                - |
+                  set -u
+                  idle=$(awk "BEGIN { printf \"%d\", $IDLE_HOURS * 3600 }")
+                  now=$(date -u +%s)
+                  # ISO 8601 UTC times sort as strings, so compare them as text
+                  cutoff=$(date -u -d "@$((now - idle))" +%Y-%m-%dT%H:%M:%SZ)
+                  echo "t11 idle teardown for root app $ROOT in $APP_NAMESPACE (idle after ${IDLE_HOURS}h, dry run: $DRY_RUN)"
+
+                  # one line per Application: <name> <time> <time> ...
+                  kubectl get applications.argoproj.io --namespace "$APP_NAMESPACE" \
+                      -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.operationState.startedAt}{" "}{.status.operationState.finishedAt}{" "}{range .status.history[*]}{.deployedAt}{" "}{end}{"\n"}{end}' \
+                      > /tmp/apps || exit 1
+
+                  latest=""
+                  while read -r app times; do
+                    case " $ROOT $APPS " in
+                      *" $app "*) ;;
+                      *) continue ;;
+                    esac
+                    for t in $times; do
+                      if [ -z "$latest" ] || [ "$t" \> "$latest" ]; then
+                        latest=$t
+                        latest_app=$app
+                      fi
+                    done
+                  done < /tmp/apps
+
+                  if [ -z "$latest" ]; then
+                    echo "no sync times found for $ROOT or its apps: keep"
+                    exit 0
+                  fi
+                  echo "last change: $latest ($latest_app); idle cutoff: $cutoff"
+                  if [ "$latest" \> "$cutoff" ]; then
+                    echo "active: keep"
+                    exit 0
+                  fi
+
+                  if [ "$DRY_RUN" = "true" ]; then
+                    echo "idle: would delete root app $ROOT"
+                    echo "may delete it: $(kubectl auth can-i delete applications.argoproj.io/$ROOT --namespace "$APP_NAMESPACE" 2>&1)"
+                    exit 0
+                  fi
+                  echo "idle: delete root app $ROOT"
+                  # this CronJob is one of the root app's resources, so do not
+                  # wait for the cascade that deletes it
+                  kubectl delete applications.argoproj.io "$ROOT" --namespace "$APP_NAMESPACE" --wait=false
+              env:
+                # the root app, and its child apps in the same namespace
+                - name: ROOT
+                  value: {{ .Release.Name | quote }}
+                - name: APP_NAMESPACE
+                  value: {{ .Release.Namespace | quote }}
+                - name: APPS
+                  value: {{ keys (default dict .Values.services) | sortAlpha | join " " | quote }}
+                - name: IDLE_HOURS
+                  value: {{ default 24 $idle.idleHours | toString | quote }}
+                - name: DRY_RUN
+                  value: {{ ternary "true" "false" (eq (toString $idle.dryRun) "true") | quote }}
+                # kubectl writes its cache under HOME
+                - name: HOME
+                  value: /tmp
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+              securityContext:
+                allowPrivilegeEscalation: false
+                privileged: false
+          volumes:
+            - name: tmp
+              emptyDir: {}
+{{- end }}

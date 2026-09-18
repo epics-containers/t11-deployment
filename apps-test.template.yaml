@@ -15,6 +15,8 @@
 #
 # To tear down, delete this Application. A PostDelete hook then deletes the
 # PVCs that Argo CD kept for the t11 services. Other PVCs are not touched.
+# Unless you turn off testBeamline.idleTeardown, a CronJob deletes this
+# Application for you after 24 hours with no change to any t11 app.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -53,6 +55,12 @@ spec:
           # both lines to keep the production account.
           uid: "{{ uid }}"
           gid: "{{ gid }}"
+          # delete this root app, and so the whole test beamline, after
+          # idleHours with no change to any t11 app. Set enabled: false to
+          # keep a permanent test beamline
+          idleTeardown:
+            enabled: true
+            idleHours: 24
           # uncomment teardown and the settings you need. An empty
           # teardown is null, which removes the chart defaults and the hook.
           # teardown:
