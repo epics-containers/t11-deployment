@@ -25,9 +25,11 @@ module load argus
 
 ## 2. Deploy your beamline
 
-Generate a root Argo CD Application for your namespace:
+Generate a root Argo CD Application for your namespace. The script runs
+with `uv`, so load it first:
 
 ```bash
+module load uv
 scripts/make-apps-test.py
 ```
 
