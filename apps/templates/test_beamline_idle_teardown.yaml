@@ -13,16 +13,15 @@ newest of each app's operationState.startedAt and finishedAt and its history
 deployedAt times. Applying a changed root app, pushing to a branch that an app
 tracks, and a self-heal all count. Opening a UI or reading PVs does not.
 
-The CronJob never renders in the reference namespace t11-beamline, whatever
-the values say. apps.yaml also sets idleTeardown.enabled to false.
+apps.yaml keeps the reference beamline permanent by setting
+idleTeardown.enabled to false. Test deployments can enable it in any namespace.
 
 idleTeardown.dryRun logs the decision and whether the ServiceAccount may
 delete the root app, and deletes nothing.
 */ -}}
 {{- $tb := default dict .Values.testBeamline -}}
 {{- $idle := default dict $tb.idleTeardown -}}
-{{- $namespace := .Values.destination.namespace | required "destination.namespace is required" -}}
-{{- if and $tb.enabled $idle.enabled (ne $namespace "t11-beamline") }}
+{{- if and $tb.enabled $idle.enabled }}
 {{- $name := "t11-test-beamline-idle-teardown" }}
 {{- $serviceAccount := default $name $idle.serviceAccountName }}
 {{- if not $idle.serviceAccountName }}

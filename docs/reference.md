@@ -2,4 +2,8 @@
 
 Dry, factual lookup: values, scripts, quotas and prerequisites.
 
-No pages yet.
+```{toctree}
+:maxdepth: 1
+
+reference/helper-scripts
+```
