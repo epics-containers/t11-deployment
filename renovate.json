@@ -24,6 +24,13 @@
             "allowedVersions": "<4"
         },
         {
+            "description": "kubectl supports servers one minor version either side. argus runs 1.35: raise this when it upgrades",
+            "matchDepNames": [
+                "kubernetes/kubernetes"
+            ],
+            "allowedVersions": "<1.37"
+        },
+        {
             "groupName": "ec charts",
             "matchSourceUrls": [
                 "https://github.com/epics-containers/ec-helm-charts"
