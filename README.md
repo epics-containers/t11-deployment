@@ -104,6 +104,31 @@ Run on its own, the script only prints the `export` lines, so
 `t11-epics-gateways` Service with `kubectl`. To skip `kubectl`, e.g. through an
 ssh tunnel, set `GATEWAY=<host>`.
 
+## Finding the published services
+
+The external IPs are assigned by the cluster and change when a Service is
+recreated. `scripts/urls.sh <namespace>` asks the cluster for them and prints
+one line per published service: a URL for web services, and `host:port` for
+anything else, e.g.
+
+```
+t11-blueapi-oauth2       http://172.23.169.78/
+t11-epics-gateways       172.23.169.24:9064 (ca-server)
+t11-epics-gateways       172.23.169.24:9065 (ca-repeater)
+t11-epics-gateways       172.23.169.24:9075 (pva-server)
+t11-epics-gateways       172.23.169.24:9076 (pva-server)
+t11-epics-opis           http://172.23.169.54/
+t11-keycloak             http://172.23.169.69:8080/
+```
+
+`t11-blueapi-oauth2` is the blueapi web UI: open `/docs` and log in as
+`alice/alice`. `t11-keycloak` serves the Keycloak admin console at `/admin`.
+
+It lists every LoadBalancer Service, every Service with `externalIPs`, and
+every Ingress in the namespace, so newly published services appear without a
+change to the script. It skips metrics ports, and lists a port published over
+both TCP and UDP once.
+
 ## Adding webhooks
 By default argocd will poll Git repositories for changes to manifests every 3 minutes. In order to have your changes applied to your app more promtly one could:
 - Trigger a refresh using the cli or web UI

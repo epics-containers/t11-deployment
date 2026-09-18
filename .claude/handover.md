@@ -32,11 +32,33 @@ items when they are done.
       bl11t-synoptic:
         targetRevision: synoptic-main-screen
     ```
-  - The override lives in the root app on each cluster, not in git. When
-    `scripts/make-apps-test.py` writes the root app again, add the override
-    again. Remove it when the branch merges.
+  - On argus the override is in `apps-test.local.yaml`, which is the source
+    of truth for the personal namespace: edit the file and apply it, never
+    the live root app. See the `test-service-change` skill. When
+    `scripts/make-apps-test.py` writes the file again, add the overrides
+    again. Remove this one when the branch merges.
+  - The home cluster's root app still carries the override directly; check
+    it there.
   - `scripts/opi.sh --local synoptic/index.bob <namespace>` opens a screen
     being edited, with PVs from the cluster.
+- **Keycloak (t11-services #18, branch `keycloak-loadbalancer`):** a
+  LoadBalancer for the admin console, `KC_HOSTNAME` unset, and a postStart
+  hook that bootstraps the realm with one partial import on every start.
+  Tested in `hgv27681` through `apps-test.local.yaml`. Remove the override
+  when #18 merges.
+- **blueapi web UI (t11-services #19, branch `blueapi-loadbalancer`, stacked
+  on #18):** the oauth2-proxy is a LoadBalancer, and an nginx sidecar serves
+  keycloak's login pages at its IP with the issuer kept as
+  `t11-keycloak:8080`. alice logs in at `http://<oauth2 IP>/docs`. Both
+  `t11-blueapi` and `t11-keycloak` track this branch in
+  `apps-test.local.yaml`. Merge #18 first, then #19, then remove both
+  overrides. Not yet tried in a real browser.
+- **t11-deployment, uncommitted on `main`:** `scripts/urls.sh`, which prints
+  the published service URLs, with `t11_check_namespace` in
+  `scripts/lib/cluster.sh` and a README section; the VS Code title bar colour
+  in `t11-deployment.code-workspace`; and the `test-service-change` skill.
+- **Tools:** kubectl 1.35.8 and helm 3.22.0 are in `/cache/bin`. The argus
+  kubeconfig is `/workspaces/podbench/k8s/hgv27681-agent-hgv27681.kubeconfig`.
 
 ## Open issues and decisions
 
