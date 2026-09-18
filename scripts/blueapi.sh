@@ -126,6 +126,9 @@ external_ip() {
 
 if [[ -z ${BLUEAPI:-} ]]; then
     BLUEAPI=$(external_ip t11-blueapi-oauth2) || exit 1
+    # outside DLS the proxy can move off port 80, which an ingress controller holds
+    port=$(t11_service_field "$namespace" t11-blueapi-oauth2 '{.spec.ports[?(@.name=="http")].port}') || exit 1
+    [[ -z $port || $port == 80 ]] || BLUEAPI=$BLUEAPI:$port
 fi
 if [[ -z ${KEYCLOAK:-} ]]; then
     KEYCLOAK=$(external_ip t11-keycloak) || exit 1

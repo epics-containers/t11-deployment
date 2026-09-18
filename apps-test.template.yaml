@@ -76,11 +76,18 @@ spec:
         #     removed: true
         #   # outside DLS: K3s servicelb serves each LoadBalancer port on every
         #   # node, so the OPI port 80 clashes with an ingress controller.
-        #   # Uncomment services: and these lines to use another port.
+        #   # Uncomment services: and these lines to use another port. Do not
+        #   # use 8080, which t11-keycloak needs.
         #   t11-epics-opis:
         #     valuesObject:
         #       service:
-        #         port: 8080
+        #         port: 8081
+        #   # the blueapi oauth2-proxy port 80 clashes in the same way
+        #   t11-blueapi:
+        #     valuesObject:
+        #       oauth2:
+        #         service:
+        #           portNumber: 8082
   syncPolicy:
     automated:
       prune: true

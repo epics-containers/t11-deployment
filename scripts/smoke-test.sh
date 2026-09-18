@@ -293,10 +293,16 @@ done < <(kubectl get pods -n "$namespace" -l ioc=true \
 kubectl get pod "$check_pod" -n "$namespace" >/dev/null 2>&1 ||
     die "no pod '$check_pod' in namespace '$namespace'"
 
+# outside DLS the proxy can move off port 80, which an ingress controller holds
+proxy_port=$(kubectl get service t11-blueapi-oauth2 -n "$namespace" \
+    -o jsonpath='{.spec.ports[?(@.name=="http")].port}') ||
+    die "no Service 't11-blueapi-oauth2' in namespace '$namespace'"
+
 log "found ${#pvs[@]} IOCs. Running the checks in $check_pod"
 status=0
 kubectl exec -i -n "$namespace" "$check_pod" -c blueapi -- \
     env PVS="${pvs[*]}" USER_ID="$user" SESSION="$session" FRAMES="$frames" \
+    BLUEAPI="http://t11-blueapi-oauth2:${proxy_port:-80}" \
     python -u - <<'PY' || status=$?
 """The checks. The pod's EPICS_* variables already point at the gateway."""
 
@@ -310,7 +316,7 @@ import urllib.parse
 import urllib.request
 
 KEYCLOAK = "http://t11-keycloak:8080/realms/master/protocol/openid-connect/token"
-BLUEAPI = "http://t11-blueapi-oauth2"  # the oauth2-proxy, as the web UI uses
+BLUEAPI = os.environ["BLUEAPI"]  # the oauth2-proxy, as the web UI uses
 TILED = "http://t11-tiled:8000/api/v1"
 
 failures = []

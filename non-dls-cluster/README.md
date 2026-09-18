@@ -36,9 +36,13 @@ To preview the objects first, run `kubectl kustomize non-dls-cluster`.
 
 When you run `scripts/make-apps-test.py`, give `--argocd-cluster in-cluster` and your
 uid and gid. Then, in `apps-test.local.yaml`, uncomment `services:` and the
-`t11-epics-opis` lines. K3s servicelb serves each LoadBalancer port on every
-node, so the OPI port 80 clashes with an ingress controller. The example sets
-port 8080. Open the OPIs at `http://<node-ip>:8080`.
+`t11-epics-opis` and `t11-blueapi` lines. K3s servicelb serves each
+LoadBalancer port on every node, so port 80 clashes with an ingress
+controller. The example moves the OPIs to port 8081, because `t11-keycloak`
+needs 8080, and the blueapi oauth2-proxy to 8082. Open the OPIs at
+`http://<node-ip>:8081` and the blueapi web UI at `http://<node-ip>:8082/docs`.
+`scripts/blueapi.sh` and `scripts/smoke-test.sh` read the proxy port from the
+Service.
 
 ## Verify
 
