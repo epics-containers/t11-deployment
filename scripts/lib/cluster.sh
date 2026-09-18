@@ -7,12 +7,14 @@
 # Set before calling:
 #   t11_prog        prefix for error messages, e.g. opi.sh
 #   t11_env_hint    the overrides named when kubectl is missing,
-#                   e.g. "OPIS and GATEWAY" (default: GATEWAY)
+#                   e.g. "OPIS and GATEWAY" (default: GATEWAY); set it
+#                   empty when the caller has no overrides
 #
 # The functions never exit. On failure they print "<t11_prog>: message" to
 # stderr and return 1, so a caller can run e.g. `t11_gateway_host ns || exit 1`.
 # Results are returned in variables, not on stdout, so that checks already
 # done are remembered and not repeated:
+#   t11_check_namespace NAMESPACE sets t11_context to the kubectl context
 #   t11_gateway_host NAMESPACE    sets t11_gateway to the gateway host
 #   t11_opis_endpoint NAMESPACE   sets t11_opis to the epics-opis host:port
 # Both honour the GATEWAY=<host> and OPIS=<host:port> overrides, which skip
@@ -41,30 +43,39 @@ t11_check_cluster() {
     done
     ((${#todo[@]})) || return 0
 
-    command -v kubectl >/dev/null ||
-        t11_error "kubectl is not installed. Install it, or set ${t11_env_hint:-GATEWAY}." || return
+    t11_check_namespace "$namespace" || return
 
-    local context
-    context=$(kubectl config current-context 2>/dev/null) ||
+    for service in "${todo[@]}"; do
+        kubectl get service "$service" -n "$namespace" >/dev/null 2>&1 ||
+            t11_error "no Service '$service' in namespace '$namespace' (context '$t11_context'). Is the t11 test beamline deployed there?" || return
+        _t11_checked+=("$namespace/$service")
+    done
+}
+
+# fail, with a clear message, when kubectl cannot read Services in the
+# namespace. Sets t11_context to the kubectl context.
+#   t11_check_namespace NAMESPACE
+t11_check_namespace() {
+    local namespace=$1
+
+    local hint=${t11_env_hint-GATEWAY}
+    command -v kubectl >/dev/null ||
+        t11_error "kubectl is not installed. Install it${hint:+, or set $hint}." || return
+
+    t11_context=$(kubectl config current-context 2>/dev/null) ||
         t11_error "kubectl has no current context. Point it at the cluster first, e.g. 'module load argus'." || return
 
     # can-i prints yes or no when the cluster answers, and an error when not
     local out
     out=$(kubectl auth can-i get services -n "$namespace" --request-timeout=5s 2>&1) || true
     if grep -qx no <<<"$out"; then
-        t11_error "context '$context' cannot read Services in namespace '$namespace'. Check the namespace name and your access."
+        t11_error "context '$t11_context' cannot read Services in namespace '$namespace'. Check the namespace name and your access."
         return
     elif ! grep -qx yes <<<"$out"; then
-        t11_error "cannot reach the cluster for context '$context'. Check the VPN or tunnel, and log in again if your token has expired.
+        t11_error "cannot reach the cluster for context '$t11_context'. Check the VPN or tunnel, and log in again if your token has expired.
 kubectl said: $(tail -n 1 <<<"$out")"
         return
     fi
-
-    for service in "${todo[@]}"; do
-        kubectl get service "$service" -n "$namespace" >/dev/null 2>&1 ||
-            t11_error "no Service '$service' in namespace '$namespace' (context '$context'). Is the t11 test beamline deployed there?" || return
-        _t11_checked+=("$namespace/$service")
-    done
 }
 
 # print a field of a Service, selected by a jsonpath
