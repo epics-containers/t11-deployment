@@ -8,5 +8,5 @@ Focused recipes for specific tasks you already know you need to do.
 how-to/change-service
 how-to/retrieve-scan-data
 how-to/change-service-config
-how-to/diagnose-smoke-test
+how-to/troubleshoot-beamline
 ```

@@ -13,3 +13,5 @@ venv*
 
 # git worktrees for branches in progress
 .claude/worktrees/
+tmp
+**/*.kubeconfig

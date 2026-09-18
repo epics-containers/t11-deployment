@@ -73,8 +73,8 @@ root_app=t11
 # the pod that runs the checks
 check_pod=t11-blueapi-0
 gateway_pod=t11-epics-gateways-0
-# how long everything must stay ready before the checks start
-settle=30
+# printed when a check fails
+troubleshoot_url=https://epics-containers.github.io/t11-deployment/how-to/troubleshoot-beamline.html
 
 # the PV to read from each IOC, by IOC name. The default is <IOC_NAME>:UPTIME
 # from devIocStats; list here any IOC that does not load it
@@ -248,32 +248,24 @@ if $wait; then
     log "waiting up to ${timeout}s for the apps and pods in '$namespace'"
     deadline=$((SECONDS + timeout))
     last=""
-    ready_since=""
     while true; do
         pending=$(not_ready)
-        if [[ -z $pending ]]; then
-            [[ -n $ready_since ]] ||
-                log "everything is ready. Checking that it stays ready for ${settle}s"
-            ready_since=${ready_since:-$SECONDS}
-            ((SECONDS - ready_since >= settle)) && break
-        else
-            [[ -z $ready_since ]] || log "something stopped being ready during the ${settle}s check"
-            ready_since=""
-        fi
+        [[ -z $pending ]] && break
         if ((SECONDS >= deadline)); then
             log "timed out. Still not ready:"
             indent <<<"$pending"
+            log "see $troubleshoot_url"
             exit 1
         fi
         # report only when something changes
-        if [[ -n $pending && $pending != "$last" ]]; then
+        if [[ $pending != "$last" ]]; then
             log "waiting for $(wc -l <<<"$pending") items:"
             head -15 <<<"$pending" | indent
             last=$pending
         fi
         sleep 10
     done
-    log "all apps are Synced and Healthy, and all pods are Ready for ${settle}s"
+    log "all apps are Synced and Healthy, and all pods are Ready"
 else
     step "1/4: skipped (--no-wait)"
 fi
@@ -293,10 +285,16 @@ done < <(kubectl get pods -n "$namespace" -l ioc=true \
 kubectl get pod "$check_pod" -n "$namespace" >/dev/null 2>&1 ||
     die "no pod '$check_pod' in namespace '$namespace'"
 
+# outside DLS the proxy can move off port 80, which an ingress controller holds
+proxy_port=$(kubectl get service t11-blueapi-oauth2 -n "$namespace" \
+    -o jsonpath='{.spec.ports[?(@.name=="http")].port}') ||
+    die "no Service 't11-blueapi-oauth2' in namespace '$namespace'"
+
 log "found ${#pvs[@]} IOCs. Running the checks in $check_pod"
 status=0
 kubectl exec -i -n "$namespace" "$check_pod" -c blueapi -- \
     env PVS="${pvs[*]}" USER_ID="$user" SESSION="$session" FRAMES="$frames" \
+    BLUEAPI="http://t11-blueapi-oauth2:${proxy_port:-80}" \
     python -u - <<'PY' || status=$?
 """The checks. The pod's EPICS_* variables already point at the gateway."""
 
@@ -310,7 +308,7 @@ import urllib.parse
 import urllib.request
 
 KEYCLOAK = "http://t11-keycloak:8080/realms/master/protocol/openid-connect/token"
-BLUEAPI = "http://t11-blueapi-oauth2"  # the oauth2-proxy, as the web UI uses
+BLUEAPI = os.environ["BLUEAPI"]  # the oauth2-proxy, as the web UI uses
 TILED = "http://t11-tiled:8000/api/v1"
 
 failures = []
@@ -479,5 +477,6 @@ if ((status)); then
         log "restarts (t11-services#26). Restart it and run this again:"
         log "  kubectl delete pod $check_pod -n $namespace"
     fi
+    log "see $troubleshoot_url"
     exit "$status"
 fi

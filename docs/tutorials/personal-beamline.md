@@ -25,9 +25,11 @@ module load argus
 
 ## 2. Deploy your beamline
 
-Generate a root Argo CD Application for your namespace:
+Generate a root Argo CD Application for your namespace. The script runs
+with `uv`, so load it first:
 
 ```bash
+module load uv
 scripts/make-apps-test.py
 ```
 
@@ -45,6 +47,16 @@ kubectl apply -f apps-test.local.yaml
 Argo CD now creates the child applications and their services, including
 the simulated IOCs, EPICS gateway, Phoebus screen server, and blueapi.
 The root application is called `t11` within your namespace.
+
+To watch the deployment in a browser, replace `<fedid>` in these links with
+your fedid:
+
+- Argo CD shows the applications in your project:
+  `https://argocd.diamond.ac.uk/applications?proj=<fedid>`.
+- Headlamp shows the pods and other resources in your namespace:
+  `https://argus-headlamp.diamond.ac.uk/c/argus/workloads?namespace=<fedid>`.
+
+`scripts/urls.sh` also prints both links, with your namespace filled in.
 
 Deploying from scratch takes around five minutes. Wait for startup and
 check the deployment:
@@ -67,7 +79,9 @@ kubectl get pods
 ```
 
 The t11 applications should be `Synced` and `Healthy`. Resolve any reported
-startup problem and rerun the smoke test.
+startup problem and rerun the smoke test. See
+[Troubleshoot a t11 beamline](../how-to/troubleshoot-beamline.md) for each
+failure.
 
 ```{note}
 The generated deployment automatically tears itself down after 24 hours

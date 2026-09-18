@@ -1,0 +1,148 @@
+# Troubleshoot a t11 beamline
+
+Find the symptom below. These commands assume a personal deployment on
+Argus:
+
+```bash
+module load argus
+```
+
+For a split deployment, inspect applications on the Argo CD cluster and
+pods on the target cluster.
+
+## From a failed smoke test
+
+Start with the first failing step in the output of `scripts/smoke-test.sh`:
+
+| Smoke-test failure | Section |
+|---|---|
+| Step 1: applications or pods are not ready | [An application is not Synced or Healthy](#an-application-is-not-synced-or-healthy) |
+| Step 2: a PV read fails | [A PV read fails](#a-pv-read-fails) |
+| Step 3: login or task submit fails | [Login or a scan fails](#login-or-a-scan-fails) |
+| Step 4: the task has errors | [Everything is Synced but a service misbehaves](#everything-is-synced-but-a-service-misbehaves) |
+| Step 4: tiled has no run, or the run failed | [The Tiled check fails](#the-tiled-check-fails) |
+
+After you fix the cause, rerun `scripts/smoke-test.sh`. Use `--no-wait` only
+when the deployment is already ready. For a split deployment, pass
+`--argocd-kubeconfig` as shown in the
+[cloud tutorial](../tutorials/cloud-smoke-test.md).
+
+## An application is not Synced or Healthy
+
+Startup normally takes around five minutes. If it stalls:
+
+```bash
+kubectl get applications
+kubectl get pods
+kubectl get events --sort-by=.metadata.creationTimestamp
+```
+
+Describe the failing pod for scheduling, image-pull or volume errors. Read
+its container logs for startup errors. Use `--previous` for a crashed
+container.
+
+## A Service has no external IP
+
+A LoadBalancer Service that shows `<pending>` in `EXTERNAL-IP` has no address
+outside the cluster:
+
+```bash
+kubectl get services
+```
+
+The Service reports no event and no error. On a K3s cluster, servicelb
+serves each LoadBalancer port on every node, so two Services cannot use the
+same port. An ingress controller also holds port 80. Give one of the clashing
+Services another port with a `services:` override in `apps-test.local.yaml`.
+The comments in `apps-test.template.yaml` show an example. Do not move
+`t11-keycloak` off port 8080, because the token issuer URL contains that
+port.
+
+## A PV read fails
+
+The smoke test reads PVs from inside the blueapi pod. Check the IOC and
+gateway pods first. If the smoke test passes but a workstation `caget`
+fails, check the workstation's gateway settings and network access:
+
+```bash
+source scripts/epics-env.sh
+scripts/gateway.sh
+caget BL11T-DI-CAM-01:HEARTBEAT
+```
+
+## Login or a scan fails
+
+Read the blueapi logs:
+
+```bash
+kubectl logs t11-blueapi-0 -c blueapi --tail=100
+```
+
+For login failures, check Keycloak and the blueapi proxy. For permission
+errors, check the user/session pairing: the default is `alice` with
+`cm12345-1`.
+
+If the smoke test reports that blueapi started before a replaced gateway and
+suggests restarting blueapi, follow its printed command once no scan is
+running.
+
+If the failure started after a change to t11-services, see
+[Everything is Synced but a service misbehaves](#everything-is-synced-but-a-service-misbehaves).
+
+## Everything is Synced but a service misbehaves
+
+Some state lives on volumes or in hooks, so a sync does not reset it. Every
+pod can be Ready and every application Synced while a service still runs
+with old values. This usually follows a change to t11-services. Check these
+three places.
+
+### Autosave restores an old IOC setting
+
+At boot, autosave restores saved values after `st.cmd` runs. A setting that
+changed in `ioc.yaml`, such as a renamed asyn port, returns to its old value.
+For example, a camera plugin reads from a port that no longer exists. The
+camera image and stats stop updating, and a scan fails with a timeout on
+`HDF5:NumCaptured_RBV`.
+
+1. Compare each plugin's live `NDArrayPort` with `NDARRAY_PORT` in the
+   service's `config/ioc.yaml`:
+
+   ```bash
+   caget BL11T-DI-CAM-01:HDF5:NDArrayPort BL11T-DI-CAM-01:HDF5:PortName_RBV
+   ```
+
+1. Set each wrong value to the value in `ioc.yaml`, e.g.
+   `caput BL11T-DI-CAM-01:HDF5:NDArrayPort CAM.PROC`.
+1. Wait for the next autosave, which keeps the new values across restarts.
+
+### The blueapi scratch clone is on an old branch
+
+The `setup-scratch` init container reuses an existing clone on the scratch
+volume and does not fetch. When the configured branch is not in the clone,
+it logs a warning and installs the old branch. Scans then fail with a
+`ModuleNotFoundError`. Look for the warning:
+
+```bash
+kubectl logs t11-blueapi-0 -c setup-scratch | grep 'Target revision'
+```
+
+To fix the clone, fetch and check out the branch, then restart blueapi:
+
+```bash
+kubectl exec t11-blueapi-0 -c blueapi -- sh -c 'cd /workspaces/dodal && git fetch origin <branch> && git checkout <branch>'
+kubectl delete pod t11-blueapi-0
+```
+
+### A new PostSync hook has not run
+
+Argo CD leaves hooks out of its diff. When a service change adds only a hook,
+such as the `t11-numtracker-configure` Job, the application stays Synced and
+the hook never runs. A missing numtracker configuration shows as
+`No configuration available for instrument "t11"`. Sync the application once
+from the Argo CD UI or CLI to run the hook.
+
+## The Tiled check fails
+
+Check the task error reported by the smoke test, then the Tiled pod's logs
+and blueapi's writer errors. A completed task and a successfully stored run
+are separate checks.
