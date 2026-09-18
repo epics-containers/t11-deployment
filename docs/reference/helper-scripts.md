@@ -11,7 +11,7 @@ namespace. Pass a namespace explicitly to use another beamline.
 | `scripts/opi.sh` | Open the Phoebus synoptic. | `--local FILE`; arguments after `--` go to Phoebus. |
 | `source scripts/epics-env.sh` | Set CA/PVA discovery to the gateway. | `--unset` clears those settings. |
 | `scripts/gateway.sh` | Print CA/PVA endpoints. | Optional namespace. |
-| `scripts/urls.sh` | Print published service addresses. | Optional namespace. |
+| `scripts/urls.sh` | Print published service addresses, and on argus the Argo CD and Headlamp pages. | Optional namespace. |
 | `scripts/blueapi.sh -- …` | Run the matching blueapi CLI image. | `login`, `controller plans`, `controller run --ws …` |
 | `scripts/docs.sh` | Serve docs with live reload. | `build` runs the strict build; `PORT` changes the default port 8000. |
 

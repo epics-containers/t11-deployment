@@ -9,6 +9,7 @@
 # recreated, so the script reads them with kubectl every time. It lists every
 # LoadBalancer Service, every Service with externalIPs, and every Ingress in
 # the namespace, so services published later show up with no change here.
+# On argus it then prints the Argo CD and Headlamp pages for the namespace.
 # Point kubectl at the cluster first, e.g. `module load argus`.
 
 set -euo pipefail
@@ -25,6 +26,8 @@ Usage: scripts/urls.sh [namespace]
 Print the address of each service that the t11 beamline publishes outside
 the cluster, one per line:
   <service>  <url or host:port>
+
+On argus, also print the Argo CD and Headlamp pages for the namespace.
 
 Arguments:
   namespace             namespace of the t11 beamline (default: \$USER)
@@ -53,6 +56,7 @@ done
 namespace=${namespace:-${USER:-$(id -un)}}
 
 t11_check_namespace "$namespace" || exit 1
+echo >&2
 
 # One line per Service port, fields separated by |:
 #   name|type|load balancer address|first external IP|port name|port|appProtocol
@@ -97,6 +101,8 @@ found=0
 seen=" "
 
 t11_note "listing the Services and Ingresses in namespace '$namespace'"
+# the separator goes with the notes, so stdout keeps one address per line
+echo --- >&2
 services=$(kubectl get services -n "$namespace" -o go-template="$service_template")
 while IFS='|' read -r name type lb external port_name port app_protocol; do
     # a metrics endpoint is not a service for people, e.g. oauth2-proxy's
@@ -144,4 +150,24 @@ while IFS='|' read -r name host path tls_hosts lb; do
 done <<<"$ingresses"
 
 ((found)) ||
-    t11_error "nothing in namespace '$namespace' (context '$t11_context') is published outside the cluster. Is the t11 test beamline deployed there?"
+    t11_error "nothing in namespace '$namespace' (context '$t11_context') is published outside the cluster. Is the t11 test beamline deployed there?" ||
+    exit 1
+
+# the API server's host name. A kubeconfig for an ssh tunnel names the server
+# 127.0.0.1 and gives the real name in tls-server-name
+api_host=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.tls-server-name}' 2>/dev/null) || true
+if [[ -z $api_host ]]; then
+    api_host=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null) || true
+    api_host=${api_host#*://}
+    api_host=${api_host%%[:/]*}
+fi
+
+# the DLS web UIs, which only argus has at these addresses. At DLS the Argo CD
+# project has the same name as the namespace
+if [[ $api_host == api.argus.diamond.ac.uk ]]; then
+    echo >&2
+    t11_note "the argus web UIs for namespace '$namespace'"
+    echo --- >&2
+    row argocd "https://argocd.diamond.ac.uk/applications?proj=$namespace"
+    row headlamp "https://argus-headlamp.diamond.ac.uk/c/argus/workloads?namespace=$namespace"
+fi
