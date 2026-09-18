@@ -3,7 +3,33 @@
     "extends": [
         "config:recommended"
     ],
+    "customManagers": [
+        {
+            "customType": "regex",
+            "description": "Tool versions pinned by a '# renovate:' comment in the Dockerfile",
+            "managerFilePatterns": [
+                "/^Dockerfile$/"
+            ],
+            "matchStrings": [
+                "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+=(?<currentValue>\\S+)"
+            ]
+        }
+    ],
     "packageRules": [
+        {
+            "description": "Argo CD renders the charts with Helm 3",
+            "matchDepNames": [
+                "helm/helm"
+            ],
+            "allowedVersions": "<4"
+        },
+        {
+            "description": "kubectl supports servers one minor version either side. argus runs 1.35: raise this when it upgrades",
+            "matchDepNames": [
+                "kubernetes/kubernetes"
+            ],
+            "allowedVersions": "<1.37"
+        },
         {
             "groupName": "ec charts",
             "matchSourceUrls": [

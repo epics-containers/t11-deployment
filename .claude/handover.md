@@ -71,7 +71,9 @@ items when they are done.
 
 ## Tools
 
-- kubectl 1.35.8 and helm 3.22.0 are in `/cache/bin`. The argus kubeconfig is
+- kubectl and helm: see the `test-service-change` skill. The `Dockerfile`
+  installs both in `/usr/local/bin`; containers built before that have them
+  in `/cache/bin`. The argus kubeconfig is
   `/workspaces/podbench/k8s/hgv27681-agent-hgv27681.kubeconfig`.
 - The sandbox cannot reach LoadBalancer IPs. To test a browser flow, replay it
   with curl from a short-lived Pod in the namespace (curlimages/curl, with

@@ -90,6 +90,19 @@ Every change to a t11 service follows these steps, in order.
   of its biggest init container and the sum of its containers, and the
   LimitRange allows at most 2Gi of ephemeral storage per container.
 
+## kubectl and helm
+
+- The devcontainer installs kubectl and helm in `/usr/local/bin`. The
+  `Dockerfile` pins their versions (`KUBECTL_VERSION`, `HELM_VERSION`), and
+  Renovate bumps them. helm stays on 3.x, which Argo CD renders with.
+- A container built before that has neither on the PATH. Use the copies in
+  `/cache/bin`, or put `/cache/bin` on the PATH.
+- Point kubectl at argus with
+  `KUBECONFIG=/workspaces/podbench/k8s/hgv27681-agent-hgv27681.kubeconfig`.
+  In claude-sandbox, argus is reached through an ssh tunnel (see CLAUDE.md).
+- Run the `scripts/` against the cluster to test them. A stub kubectl
+  proves only the script's own logic.
+
 ## Testing a browser flow
 
 The sandbox cannot reach LoadBalancer IPs. Replay the flow with curl from a
