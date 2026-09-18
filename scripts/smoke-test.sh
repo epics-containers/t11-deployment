@@ -44,6 +44,11 @@ Arguments:
 
 Options:
   -n, --namespace NS    same as the namespace argument
+      --argocd-context CONTEXT
+                        context for Application checks (default: current)
+      --argocd-kubeconfig PATH
+                        kubeconfig for Application checks (default: current
+                        KUBECONFIG); accepts a colon-separated list of files
   -t, --timeout SECS    how long to wait for the apps and pods (default: 1800)
       --no-wait         skip the wait, e.g. for a beamline already up
   -u, --user USER       log in as system-test-blueapi-USER (default: alice)
@@ -55,6 +60,8 @@ EOF
 }
 
 namespace=""
+argocd_context=""
+argocd_kubeconfig=""
 timeout=1800
 wait=true
 user=alice
@@ -95,6 +102,16 @@ while (($#)); do
     -t | --timeout)
         need_value "$1" $# "${2:-}"
         timeout=$2
+        shift 2
+        ;;
+    --argocd-context)
+        need_value "$1" $# "${2:-}"
+        argocd_context=$2
+        shift 2
+        ;;
+    --argocd-kubeconfig)
+        need_value "$1" $# "${2:-}"
+        argocd_kubeconfig=$2
         shift 2
         ;;
     --no-wait)
@@ -153,24 +170,35 @@ indent() {
 # ---------------------------------------------------------------------------
 # 1. wait for the apps and pods
 
+# Only Application lookups use the Argo CD connection. Pod checks and exec
+# continue to use the caller's current cluster, where the beamline runs.
+argocd_kubectl() (
+    if [[ -n $argocd_kubeconfig ]]; then
+        export KUBECONFIG=$argocd_kubeconfig
+    fi
+    local args=()
+    [[ -z $argocd_context ]] || args+=(--context "$argocd_context")
+    kubectl "${args[@]}" "$@"
+)
+
 # print what is not ready yet, one item per line; nothing when all is ready
 not_ready() {
     local root children apps pods
 
-    root=$(kubectl get application "$root_app" -n "$namespace" \
+    root=$(argocd_kubectl get application "$root_app" -n "$namespace" \
         -o jsonpath='{.status.sync.status} {.status.health.status}' 2>/dev/null) || {
         echo "root app '$root_app' (not found)"
         return
     }
     [[ $root == "Synced Healthy" ]] || echo "root app '$root_app' ($root)"
 
-    children=$(kubectl get application "$root_app" -n "$namespace" \
+    children=$(argocd_kubectl get application "$root_app" -n "$namespace" \
         -o jsonpath='{range .status.resources[?(@.kind=="Application")]}{.name}{"\n"}{end}')
     if [[ -z $children ]]; then
         echo "child apps (none listed yet)"
         return
     fi
-    apps=$(kubectl get applications -n "$namespace" \
+    apps=$(argocd_kubectl get applications -n "$namespace" \
         -o jsonpath='{range .items[*]}{.metadata.name} {.status.sync.status} {.status.health.status}{"\n"}{end}')
     local name status
     while read -r name; do

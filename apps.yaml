@@ -19,7 +19,6 @@ spec:
       version: v3
       valuesObject:
         # the reference beamline is permanent: never delete it when idle.
-        # The chart also never runs idle teardown in t11-beamline
         testBeamline:
           idleTeardown:
             enabled: false

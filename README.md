@@ -57,7 +57,7 @@ charts in t11-services and ec-helm-charts do not change.
   pushing to a tracked branch counts as a change. To keep a test beamline, set
   `idleTeardown.enabled: false` in your root app. `idleTeardown.dryRun` logs
   the decision without deleting. The reference beamline in `t11-beamline`
-  never runs it.
+  disables it explicitly in `apps.yaml`.
 
 Fork t11-services if you change IOCs or other services, or if your cluster
 needs other settings such as a `nodeSelector`. Then set
