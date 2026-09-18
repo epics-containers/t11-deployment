@@ -69,10 +69,10 @@ t11_check_namespace() {
 
     local hint=${t11_env_hint-GATEWAY}
     command -v kubectl >/dev/null ||
-        t11_error "kubectl is not installed. Install it${hint:+, or set $hint}." || return
+        t11_error "no kubectl. Use \"module load <cluster>\"${hint:+, or set $hint}." || return
 
     t11_context=$(kubectl config current-context 2>/dev/null) ||
-        t11_error "kubectl has no current context. Point it at the cluster first, e.g. 'module load argus'." || return
+        t11_error "kubectl has no current context. Use \"module load <cluster>\"." || return
 
     # can-i prints yes or no when the cluster answers, and an error when not.
     # Leave stderr on the terminal: when the token has expired, kubectl's
