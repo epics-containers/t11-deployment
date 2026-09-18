@@ -54,9 +54,15 @@ Every change to a t11 service follows these steps, in order.
    - Wait for the app to be Synced at the new revision, not only Healthy. A
      failed sync leaves the old Pods running and Healthy; read
      `.status.operationState.message` for the reason.
+   - To move every service to one t11-services branch, set
+     `valuesObject.source.targetRevision` in the root app instead of adding
+     per-service overrides. Any per-service `targetRevision` still wins, so
+     check the ones left in the file. The central `t11-beamline` root app
+     (`apps.yaml`) has no `source:` in its `valuesObject`; add one there.
    - A change to the root app chart itself (t11-deployment `apps/`) is tested
-     the same way: point the root app's own `source.targetRevision` at the
-     branch, and back to `main` after the merge.
+     the same way: point the root app's own `spec.source.targetRevision` at
+     the branch, and back to `main` after the merge. That moves only the
+     app-of-apps chart, not the services.
 
 3. **Open a PR** in the service repo as soon as the branch works, so that the
    change is not forgotten. Use `gh api` REST calls, not `gh pr create`. Add
