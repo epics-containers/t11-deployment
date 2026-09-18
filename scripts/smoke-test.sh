@@ -429,16 +429,17 @@ log("all checks passed")
 PY
 
 if ((status)); then
-    # when the gateway pod is replaced during a scan, e.g. by restartOnNewIocs,
-    # blueapi's puts to the detector can time out until blueapi restarts
+    # after the gateway pod is replaced, e.g. by a rollout or restartOnNewIocs,
+    # blueapi's puts to the detector can time out until blueapi restarts.
+    # See https://github.com/epics-containers/t11-services/issues/26
     blueapi_started=$(kubectl get pod "$check_pod" -n "$namespace" \
         -o jsonpath='{.status.containerStatuses[?(@.name=="blueapi")].state.running.startedAt}' 2>/dev/null) || true
     gateway_created=$(kubectl get pod "$gateway_pod" -n "$namespace" \
         -o jsonpath='{.metadata.creationTimestamp}' 2>/dev/null) || true
     if [[ -n $blueapi_started && -n $gateway_created && $gateway_created > $blueapi_started ]]; then
         log "hint: blueapi started at $blueapi_started, before $gateway_pod at $gateway_created."
-        log "if the gateway restarted during a scan, blueapi's puts can time out until"
-        log "it restarts. Restart it and run this again:"
+        log "after the gateway pod is replaced, blueapi's puts can time out until it"
+        log "restarts (t11-services#26). Restart it and run this again:"
         log "  kubectl delete pod $check_pod -n $namespace"
     fi
     exit "$status"
