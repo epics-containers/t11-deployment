@@ -220,18 +220,27 @@ not_ready() {
     done <<<"$pods"
 
     # with restartOnNewIocs, the gateway's ioc-watcher restarts the gateway
-    # pod when an IOC pod starts after it, so wait for that restart too
-    local gateway_created ioc started
-    gateway_created=$(kubectl get pod "$gateway_pod" -n "$namespace" \
-        -o jsonpath='{.metadata.creationTimestamp} {.spec.containers[*].name}' 2>/dev/null) || return 0
-    [[ " $gateway_created " == *" ioc-watcher "* ]] || return 0
-    gateway_created=${gateway_created%% *}
-    while read -r ioc started; do
-        # RFC 3339 times in UTC compare as strings
-        [[ -z $started || ! $started > $gateway_created ]] ||
-            echo "gateway restart for IOC $ioc (started after $gateway_pod)"
-    done < <(kubectl get pods -n "$namespace" -l ioc=true \
-        -o jsonpath='{range .items[*]}{.metadata.name} {.status.startTime}{"\n"}{end}')
+    # pod when an IOC Service is created after the gateway containers started,
+    # so wait for that restart too. Apply the watcher's own test: a restarted
+    # IOC pod keeps its Service, and the gateways reconnect with no restart
+    local containers gateway_started service created
+    containers=$(kubectl get pod "$gateway_pod" -n "$namespace" \
+        -o jsonpath='{.spec.containers[*].name}' 2>/dev/null) || return 0
+    [[ " $containers " == *" ioc-watcher "* ]] || return 0
+    # RFC 3339 times in UTC sort and compare as strings
+    gateway_started=$(kubectl get pod "$gateway_pod" -n "$namespace" \
+        -o jsonpath='{range .status.containerStatuses[?(@.name!="ioc-watcher")]}{.state.running.startedAt}{"\n"}{end}' |
+        sort | tail -n 1)
+    # the pod checks above already report gateway containers that are not running
+    [[ -n $gateway_started ]] || return 0
+    # the watcher counts a Service labelled ioc or is_ioc as an IOC
+    while read -r service created; do
+        [[ -z $created || ! $created > $gateway_started ]] ||
+            echo "gateway restart for IOC Service $service (created after $gateway_pod started)"
+    done < <(for label in ioc is_ioc; do
+        kubectl get services -n "$namespace" -l "$label" \
+            -o jsonpath='{range .items[*]}{.metadata.name} {.metadata.creationTimestamp}{"\n"}{end}'
+    done | sort -u)
 }
 
 if $wait; then
