@@ -28,7 +28,7 @@ tutorials
 Focused recipes for specific tasks you already have in mind.
 
 ```{toctree}
-:maxdepth: 3
+:maxdepth: 2
 
 how-to
 ```
