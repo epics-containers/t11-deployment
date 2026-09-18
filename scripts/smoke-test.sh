@@ -73,8 +73,6 @@ root_app=t11
 # the pod that runs the checks
 check_pod=t11-blueapi-0
 gateway_pod=t11-epics-gateways-0
-# how long everything must stay ready before the checks start
-settle=30
 # printed when a check fails
 troubleshoot_url=https://epics-containers.github.io/t11-deployment/how-to/troubleshoot-beamline.html
 
@@ -250,18 +248,9 @@ if $wait; then
     log "waiting up to ${timeout}s for the apps and pods in '$namespace'"
     deadline=$((SECONDS + timeout))
     last=""
-    ready_since=""
     while true; do
         pending=$(not_ready)
-        if [[ -z $pending ]]; then
-            [[ -n $ready_since ]] ||
-                log "everything is ready. Checking that it stays ready for ${settle}s"
-            ready_since=${ready_since:-$SECONDS}
-            ((SECONDS - ready_since >= settle)) && break
-        else
-            [[ -z $ready_since ]] || log "something stopped being ready during the ${settle}s check"
-            ready_since=""
-        fi
+        [[ -z $pending ]] && break
         if ((SECONDS >= deadline)); then
             log "timed out. Still not ready:"
             indent <<<"$pending"
@@ -269,14 +258,14 @@ if $wait; then
             exit 1
         fi
         # report only when something changes
-        if [[ -n $pending && $pending != "$last" ]]; then
+        if [[ $pending != "$last" ]]; then
             log "waiting for $(wc -l <<<"$pending") items:"
             head -15 <<<"$pending" | indent
             last=$pending
         fi
         sleep 10
     done
-    log "all apps are Synced and Healthy, and all pods are Ready for ${settle}s"
+    log "all apps are Synced and Healthy, and all pods are Ready"
 else
     step "1/4: skipped (--no-wait)"
 fi
