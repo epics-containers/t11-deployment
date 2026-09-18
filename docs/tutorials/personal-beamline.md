@@ -67,7 +67,9 @@ kubectl get pods
 ```
 
 The t11 applications should be `Synced` and `Healthy`. Resolve any reported
-startup problem and rerun the smoke test.
+startup problem and rerun the smoke test. See
+[Troubleshoot a t11 beamline](../how-to/troubleshoot-beamline.md) for each
+failure.
 
 ```{note}
 The generated deployment automatically tears itself down after 24 hours

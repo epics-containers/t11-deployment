@@ -75,6 +75,8 @@ check_pod=t11-blueapi-0
 gateway_pod=t11-epics-gateways-0
 # how long everything must stay ready before the checks start
 settle=30
+# printed when a check fails
+troubleshoot_url=https://epics-containers.github.io/t11-deployment/how-to/troubleshoot-beamline.html
 
 # the PV to read from each IOC, by IOC name. The default is <IOC_NAME>:UPTIME
 # from devIocStats; list here any IOC that does not load it
@@ -263,6 +265,7 @@ if $wait; then
         if ((SECONDS >= deadline)); then
             log "timed out. Still not ready:"
             indent <<<"$pending"
+            log "see $troubleshoot_url"
             exit 1
         fi
         # report only when something changes
@@ -485,5 +488,6 @@ if ((status)); then
         log "restarts (t11-services#26). Restart it and run this again:"
         log "  kubectl delete pod $check_pod -n $namespace"
     fi
+    log "see $troubleshoot_url"
     exit "$status"
 fi

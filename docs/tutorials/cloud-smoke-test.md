@@ -42,7 +42,8 @@ Deploying from scratch takes around five minutes. The script waits for
 the applications on `argocd-test` and the pods on
 Pollux to become ready. It then reads IOC PVs through the gateway, runs a
 five-reading Bluesky `count` plan, and checks that Tiled recorded a successful
-run. Success ends with `all checks passed` and exit status 0.
+run. Success ends with `all checks passed` and exit status 0. If a check
+fails, see [Troubleshoot a t11 beamline](../how-to/troubleshoot-beamline.md).
 
 ## 3. Tear down the beamline
 
