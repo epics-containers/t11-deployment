@@ -5,11 +5,11 @@ items when they are done.
 
 ## Where things stand
 
-- Every t11 app in `hgv27681` tracks `main`, and `apps-test.local.yaml` has
-  no `services:` overrides. All 14 apps were Synced and Healthy at
-  t11-services `1176a67`.
-- t11-services and t11-deployment have no open PRs and no branches except
-  `main`.
+- The `hgv27681` root app tracks t11-deployment `main`. Other work in
+  progress has put branch overrides in `apps-test.local.yaml`; read the file
+  for the current set rather than trusting a list here.
+- Idle teardown is live in `hgv27681` (24 h, not dry run): the namespace
+  deletes its own beamline after a day with no Argo CD sync.
 - Work on a service follows the `test-service-change` skill: branch, override
   in `apps-test.local.yaml`, apply, PR, then merge and drop the override.
 
@@ -36,6 +36,13 @@ items when they are done.
 - t11-deployment #18: a devcontainer. #19: `scripts/urls.sh`, which prints
   each published service's address, and the `test-service-change` skill.
   #17: Sphinx 9.
+- t11-deployment #21: `testBeamline.idleTeardown`, a CronJob that deletes the
+  root app after `idleHours` (24) with no sync of the root app or its child
+  apps. It is off by default, never renders in `t11-beamline`, and
+  `apps-test.template.yaml` turns it on. Only dry run has been tested; a real
+  idle deletion has not been seen yet. `apps.yaml` now sets it to false, but
+  the live `t11-beamline` root app picks that up only when `apps.yaml` is
+  applied again. `.claude/worktrees/` is gitignored for git worktrees.
 
 ## Open issues and decisions
 

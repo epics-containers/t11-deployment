@@ -51,6 +51,12 @@ Every change to a t11 service follows these steps, in order.
      argocd.argoproj.io/refresh=normal --overwrite`.
    - Test behaviour, not just Argo CD status. Synced and Healthy says nothing
      about, for example, whether keycloak still has its clients.
+   - Wait for the app to be Synced at the new revision, not only Healthy. A
+     failed sync leaves the old Pods running and Healthy; read
+     `.status.operationState.message` for the reason.
+   - A change to the root app chart itself (t11-deployment `apps/`) is tested
+     the same way: point the root app's own `source.targetRevision` at the
+     branch, and back to `main` after the merge.
 
 3. **Open a PR** in the service repo as soon as the branch works, so that the
    change is not forgotten. Use `gh api` REST calls, not `gh pr create`. Add
@@ -61,6 +67,30 @@ Every change to a t11 service follows these steps, in order.
    so that the service tracks `main`. Leave the other overrides alone. Delete
    the branch only after that apply: Argo CD cannot fetch a deleted branch,
    and an override that names one breaks the service's app.
+
+## Foot-guns on DLS clusters
+
+- **Kyverno** rejects a container unless its `securityContext` sets
+  `allowPrivilegeEscalation: false` and `privileged: false` explicitly. The
+  sync fails with a `validate.kyverno` webhook error, and only
+  `operationState.message` shows it.
+- **Per-CPU workers:** images such as nginx start a worker per node CPU, over
+  100 on DLS nodes, and are OOMKilled under a small memory limit. Set
+  `worker_processes 1` or the equivalent.
+- **Unset resources** take the LimitRange default of 1 CPU, which counts
+  against the 10 CPU namespace quota. Give every container, sidecar and Job
+  explicit requests and limits.
+
+## Testing a browser flow
+
+The sandbox cannot reach LoadBalancer IPs. Replay the flow with curl from a
+short-lived Pod in the namespace, e.g. `kubectl run curltest --rm -i
+--restart=Never --image=curlimages/curl` with `--overrides` giving the
+Kyverno `securityContext` and small resources, and a script on stdin that
+keeps a cookie jar, follows the redirects and posts the login form. It checks
+the HTTP flow but runs no JavaScript, so ask the user to try a real browser
+too. Where a response is opaque, decode the evidence: a JWT's claims, or an
+oauth2-proxy session cookie with the dev cookie secret.
 
 Commit, push, open PRs and merge only as the user has asked. Opening the PR in
 step 3 is part of this workflow, so it needs no separate request.
