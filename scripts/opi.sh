@@ -133,10 +133,16 @@ fi
 t11_gateway_host "$namespace" || exit 1
 GATEWAY=$t11_gateway
 
+# fetch the image again whenever the registry has a newer one: a stale cached
+# image goes unnoticed, and Phoebus before 5.0.4 (jca 2.4.9) stops searching
+# for CA PVs when it only has name servers, leaving random PVs disconnected.
+# docker has no --pull=newer; its --pull=always downloads only changed layers.
 if command -v podman >/dev/null; then
     runtime=podman
+    pull=newer
 elif command -v docker >/dev/null; then
     runtime=docker
+    pull=always
 else
     die "podman or docker is required"
 fi
@@ -156,6 +162,7 @@ EOF
 
 args=(
     -it --rm
+    --pull="$pull"
     -e DISPLAY
     --net host
     --security-opt=label=type:container_runtime_t
