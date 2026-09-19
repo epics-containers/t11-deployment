@@ -58,9 +58,11 @@ items when they are done.
   branch, a Jekyll build of the README replaces the Sphinx site.
 - **#8 Sphinx docs:** the page plan is in the issue. The first page to write
   is the tutorial for a test deployment.
-- **`scripts/opi.sh` open points:** pin the ec-phoebus tag in place of
-  `latest`, add `-it` only when stdin is a terminal, add `--security-opt`
-  for podman only.
+- **`scripts/opi.sh` open points:** add `-it` only when stdin is a terminal,
+  add `--security-opt` for podman only. The image stays on `latest`, but
+  `--pull=newer` (podman) or `--pull=always` (docker) now refreshes a stale
+  copy. A cached ec-phoebus 5.0.2 (jca 2.4.9) left random CA PVs disconnected
+  through the name-server gateway; 5.0.5 (jca 2.4.11) fixes it.
 - **Home cluster:** its root app still carried a `bl11t-synoptic` override
   for `synoptic-main-screen`, which is now deleted. Remove the override
   there.
