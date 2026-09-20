@@ -6,4 +6,5 @@ Dry, factual lookup: values, scripts, quotas and prerequisites.
 :maxdepth: 1
 
 reference/helper-scripts
+reference/template-differences
 ```
