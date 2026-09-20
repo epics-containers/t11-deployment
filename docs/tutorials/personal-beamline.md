@@ -4,6 +4,10 @@ In this tutorial you will deploy your own copy of the t11 simulation
 beamline, open its Phoebus controls, read an EPICS process variable (PV),
 and collect five detector readings with a Bluesky plan from the command line.
 
+Once you have completed this tutorial, see
+[Working with t11: repositories and local overrides](../explanations/repositories.md)
+for how to try configuration and service changes on your test beamline.
+
 ## 1. Get the deployment repository
 
 Clone the repository and enter it, or use an existing checkout:
