@@ -45,6 +45,16 @@
     word-break: break-word;
 }
 
+/* Distinguish YAML guidance comments from unquoted configuration values. */
+html[data-theme="light"] .highlight-yaml .highlight .c1 {
+    color: #0055cc;
+    font-weight: 600;
+}
+html[data-theme="dark"] .highlight-yaml .highlight .c1 {
+    color: #65b5ff;
+    font-weight: 600;
+}
+
 /* Subtle accent on the left of inline literals and admonition titles. */
 .bd-content a {
     text-decoration-thickness: 1px;
