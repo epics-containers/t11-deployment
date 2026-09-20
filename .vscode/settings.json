@@ -1,0 +1,29 @@
+{
+    "terminal.integrated.sendKeybindingsToShell": false,
+    "terminal.integrated.allowChords": false,
+    "terminal.integrated.allowMnemonics": false,
+    "terminal.integrated.macOptionIsMeta": true,
+    "terminal.integrated.commandsToSkipShell": [
+        "workbench.action.showCommands",
+        "-workbench.action.togglePanel",
+        "-workbench.action.quickOpen",
+        "-workbench.action.terminal.focusFind",
+        "-workbench.action.zoomOut",
+        "-workbench.action.terminal.killEditor",
+        "-workbench.action.terminal.focusNext",
+        "-workbench.action.terminal.focusPrevious",
+        "-workbench.action.nextEditor",
+        "-workbench.action.previousEditor",
+        "-workbench.action.terminal.focusNextPane",
+        "-workbench.action.terminal.focusPreviousPane",
+        "-workbench.action.terminal.scrollToPreviousCommand",
+        "-workbench.action.terminal.scrollToNextCommand",
+        "-workbench.action.terminal.selectToPreviousCommand",
+        "-workbench.action.terminal.selectToNextCommand",
+        "-workbench.action.terminal.scrollUp",
+        "-workbench.action.terminal.scrollDown",
+        "-workbench.action.terminal.scrollToTop",
+        "-workbench.action.terminal.scrollToBottom",
+        "-workbench.action.terminal.sizeToContentWidth"
+    ]
+}
