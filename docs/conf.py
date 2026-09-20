@@ -38,13 +38,18 @@ html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 html_show_sphinx = False
+html_logo = "_static/epics-containers.png"
+html_favicon = "_static/epics-containers.png"
 
 html_theme_options = {
     "github_url": "https://github.com/epics-containers/t11-deployment",
     "use_edit_page_button": True,
     "navigation_with_keys": False,
     "icon_links": [],
-    "logo": {"text": "t11-deployment"},
+    "logo": {
+        "text": "t11-deployment",
+        "alt_text": "epics-containers — t11 home",
+    },
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
 }
 
