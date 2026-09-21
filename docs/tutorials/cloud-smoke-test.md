@@ -14,7 +14,7 @@ the IDs of the `k8s-t11-beamline` functional account:
 module load uv
 scripts/make-apps-test.py \
   --namespace t11-beamline \
-  --argocd-cluster argus \
+  --argocd-cluster telamon \
   --target-cluster pollux \
   --uid 36261 --gid 36261 \
   --services-repo https://github.com/epics-containers/t11-services \
