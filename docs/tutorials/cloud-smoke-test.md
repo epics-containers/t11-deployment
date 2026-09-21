@@ -8,36 +8,43 @@ UID and primary GID, both `36261`.
 
 From a checkout of `t11-deployment`, generate the application. Run all the
 commands below in the same terminal. Set the UID and primary GID to `36261`,
-the IDs of the `k8s-t11-beamline` functional account. The script runs with
-`uv`, so load it first:
+the IDs of the `k8s-t11-beamline` functional account:
 
 ```bash
 module load uv
 scripts/make-apps-test.py \
   --namespace t11-beamline \
-  --argocd-cluster argocd-test \
+  --argocd-cluster argus \
   --target-cluster pollux \
-  --uid 36261 --gid 36261
+  --uid 36261 --gid 36261 \
+  --services-repo https://github.com/epics-containers/t11-services \
+  --revision main
 ```
 
-Accept the defaults for the services repository and deployment revision.
-The script writes `apps-test.local.yaml`.
-
-Set the path to your kubeconfig for `argocd-test`, then apply the application:
+Load the telamon environment (argocd-test).
 
 ```bash
-T11_ARGOCD_KUBECONFIG=<your kube config for argocd-test>
-KUBECONFIG="$T11_ARGOCD_KUBECONFIG" kubectl apply -f apps-test.local.yaml
+module load telamon
+kubectl apply -f apps-test.local.yaml -n t11-beamline
 ```
+
+Keep `apps-test.local.yaml` and re-apply it for the next test; there is no need
+to regenerate it each time.
 
 ## 2. Run the smoke test
 
 Switch to Pollux, where the beamline pods run:
 
 ```bash
+module unload telamon
 module load pollux
-scripts/smoke-test.sh t11-beamline \
-  --argocd-kubeconfig "$T11_ARGOCD_KUBECONFIG"
+scripts/smoke-test.sh t11-beamline
+```
+
+```{warning}
+t11 uses 8 cluster IPs. In early testing, this was the resource
+most likely to be exhausted on Pollux. If deployment takes more than five
+minutes, check the status of the services.
 ```
 
 Deploying from scratch takes around five minutes. The script waits for
@@ -52,7 +59,7 @@ fails, see [Troubleshoot a t11 beamline](../how-to/troubleshoot-beamline.md).
 Delete the root application from `argocd-test`:
 
 ```bash
-KUBECONFIG="$T11_ARGOCD_KUBECONFIG" kubectl delete application t11 -n t11-beamline
+kubectl delete application t11 -n t11-beamline
 ```
 
 Argo CD removes the beamline services on Pollux. The teardown hook also
