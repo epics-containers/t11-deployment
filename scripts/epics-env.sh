@@ -11,8 +11,10 @@
 #   . scripts/epics-env.sh --unset
 #
 # Sourced, it runs itself with bash and evals the export lines that prints, so
-# no shell options leak into your shell and an error never exits it. Run on
-# its own, it only prints the lines, for `eval "$(scripts/epics-env.sh ...)"`.
+# no shell options leak into your shell and an error never exits it, even
+# with errexit enabled. T11_EPICS_ENV_STATUS records success (0) or failure.
+# Run on its own, it only prints the lines, for
+# `eval "$(scripts/epics-env.sh ...)"`.
 # GATEWAY=<host> skips kubectl.
 
 # ---- sourced: run this file with bash and apply its output ----
@@ -39,21 +41,32 @@ if [ -n "$_t11_sourced" ]; then
     fi
     case " $* " in
     *" -h "* | *" --help "*)
-        bash "$_t11_script" "$@"
-        _t11_status=$?
-        ;;
-    *)
-        # pass GATEWAY on explicitly: zsh does not export `GATEWAY=x . script`
-        if _t11_out=$(GATEWAY=${GATEWAY:-} bash "$_t11_script" "$@"); then
-            eval "$_t11_out"
+        if bash "$_t11_script" "$@"; then
             _t11_status=0
         else
             _t11_status=$?
         fi
         ;;
+    *)
+        # pass GATEWAY on explicitly: zsh does not export `GATEWAY=x . script`
+        if _t11_out=$(GATEWAY=${GATEWAY:-} bash "$_t11_script" "$@"); then
+            if eval "$_t11_out"; then
+                _t11_status=0
+            else
+                _t11_status=$?
+            fi
+        else
+            _t11_status=$?
+        fi
+        ;;
     esac
-    unset _t11_sourced _t11_script _t11_out
-    eval "unset _t11_status; return $_t11_status"
+    # Returning a failure here would terminate a caller using set -e, even
+    # though the subprocess failure above was handled. Keep sourced mode
+    # safe and make its result available without changing the caller's options.
+    # shellcheck disable=SC2034 # Result for the shell that sourced this file.
+    T11_EPICS_ENV_STATUS=$_t11_status
+    unset _t11_sourced _t11_script _t11_out _t11_status
+    return 0
 fi
 unset _t11_sourced
 
@@ -83,6 +96,9 @@ Set the EPICS CA and PVA client variables in your bash or zsh shell, so that
 caget, pvget and friends reach the t11 beamline's PVs through its EPICS
 gateway. Source the script to apply them. Run on its own, it only prints the
 export lines, for eval.
+When sourced, errors leave existing EPICS settings unchanged and return
+safely even with set -e; T11_EPICS_ENV_STATUS holds the result (0 on success).
+When executed, errors produce a nonzero exit status.
 
 Arguments:
   namespace             namespace of the t11 beamline (default: \$USER)

@@ -70,3 +70,9 @@ These environment variables bypass the corresponding Kubernetes lookups:
 | `BLUEAPI=host:port`, `KEYCLOAK=ip`, `IMAGE=image` | `blueapi.sh`; set all three to bypass Kubernetes entirely. |
 
 `IMAGE` also overrides the Phoebus container image in `opi.sh`.
+
+When sourced, `epics-env.sh` returns safely even if your shell uses `set -e`.
+If gateway discovery fails, it prints the error and keeps your existing EPICS
+settings. Check `T11_EPICS_ENV_STATUS` for the result (`0` means success).
+When executed rather than sourced, the script returns a nonzero exit status
+on failure.
