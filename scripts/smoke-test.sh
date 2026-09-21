@@ -49,6 +49,9 @@ Options:
       --argocd-kubeconfig PATH
                         kubeconfig for Application checks (default: current
                         KUBECONFIG); accepts a colon-separated list of files
+      --pod-cluster PATH
+                        kubeconfig for Pod/Service checks and scan execution
+                        (default: current KUBECONFIG); uses its current context
   -t, --timeout SECS    how long to wait for the apps and pods (default: 1800)
       --no-wait         skip the wait, e.g. for a beamline already up
   -u, --user USER       log in as system-test-blueapi-USER (default: alice)
@@ -61,7 +64,8 @@ EOF
 
 namespace=""
 argocd_context=""
-argocd_kubeconfig=""
+argocd_kubeconfig=${KUBECONFIG:-$HOME/.kube/config}
+pod_kubeconfig=${KUBECONFIG:-$HOME/.kube/config}
 timeout=1800
 wait=true
 user=alice
@@ -114,6 +118,12 @@ while (($#)); do
         argocd_kubeconfig=$2
         shift 2
         ;;
+    --pod-cluster)
+        need_value "$1" $# "${2:-}"
+        [[ $2 != -* ]] || die "$1 needs a kubeconfig path. See --help."
+        pod_kubeconfig=$2
+        shift 2
+        ;;
     --no-wait)
         wait=false
         shift
@@ -158,6 +168,9 @@ step() {
 }
 
 namespace=${namespace:-${USER:-$(id -un)}}
+# Keep the caller's connection for Argo CD; all other kubectl calls, including
+# the shared namespace checks and the scan's exec, use the workload connection.
+export KUBECONFIG=$pod_kubeconfig
 t11_check_namespace "$namespace" || exit 1
 log "connected with context '$t11_context'"
 
@@ -171,7 +184,7 @@ indent() {
 # 1. wait for the apps and pods
 
 # Only Application lookups use the Argo CD connection. Pod checks and exec
-# continue to use the caller's current cluster, where the beamline runs.
+# use --pod-cluster when supplied, otherwise the caller's current cluster.
 argocd_kubectl() (
     if [[ -n $argocd_kubeconfig ]]; then
         export KUBECONFIG=$argocd_kubeconfig
@@ -475,7 +488,9 @@ if ((status)); then
         log "hint: blueapi started at $blueapi_started, before $gateway_pod at $gateway_created."
         log "after the gateway pod is replaced, blueapi's puts can time out until it"
         log "restarts (t11-services#26). Restart it and run this again:"
-        log "  kubectl delete pod $check_pod -n $namespace"
+        printf -v restart_command 'KUBECONFIG=%q kubectl delete pod %q -n %q' \
+            "$pod_kubeconfig" "$check_pod" "$namespace"
+        log "  $restart_command"
     fi
     log "see $troubleshoot_url"
     exit "$status"

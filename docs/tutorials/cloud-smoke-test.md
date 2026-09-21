@@ -33,13 +33,19 @@ to regenerate it each time.
 
 ## 2. Run the smoke test
 
-Switch to Pollux, where the beamline pods run:
+Keep the Telamon module loaded for the Argo CD Application checks. Point
+`--pod-cluster` at your Pollux kubeconfig, whose current context must select
+Pollux:
 
 ```bash
-module unload telamon
-module load pollux
-scripts/smoke-test.sh t11-beamline
+scripts/smoke-test.sh t11-beamline \
+  --pod-cluster ~/.kube/config_pollux
 ```
+
+Replace `~/.kube/config_pollux` with your Pollux kubeconfig path. Pod and
+Service checks and scan execution use that file; Application checks keep
+using the loaded Telamon connection. The script does not change your shell's
+Kubernetes connection. Without `--pod-cluster`, both use the loaded connection.
 
 Deploying from scratch takes around five minutes. The script waits for
 the applications on `argocd-test` and the pods on
@@ -70,12 +76,10 @@ spec:
 This snippet shows the setting's location; keep the rest of your application
 file, including its cluster, namespace and UID/GID settings.
 
-Switch back to Telamon, where the root Argo CD Application lives, and apply
-the edited file:
+With Telamon still loaded, apply the edited file to the cluster where the
+root Argo CD Application lives:
 
 ```bash
-module unload pollux
-module load telamon
 kubectl apply -f apps-test.local.yaml -n t11-beamline
 ```
 
@@ -87,11 +91,9 @@ it with automatic deletion enabled. To restore automatic deletion, set
 
 ## 4. Tear down the beamline
 
-Delete the root application from `argocd-test`:
+With Telamon still loaded, delete the root application from `argocd-test`:
 
 ```bash
-module unload pollux
-module load telamon
 kubectl delete application t11 -n t11-beamline
 ```
 

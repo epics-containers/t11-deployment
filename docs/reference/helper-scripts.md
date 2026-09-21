@@ -23,7 +23,12 @@ overwrites the output file.
 The smoke test uses `alice` and session `cm12345-1` by default. Override them
 with `--user` and `--session`. For separate clusters, `--argocd-kubeconfig`
 and `--argocd-context` select the connection for Application checks only;
-pod checks and execution use the current connection.
+Pod/Service checks and scan execution use the current connection unless
+`--pod-cluster PATH` selects another kubeconfig (using that file's current
+context). For example, with Telamon loaded, run
+`scripts/smoke-test.sh t11-beamline --pod-cluster ~/.kube/config_pollux`.
+Application checks retain the original connection unless overridden with
+the `--argocd-*` options. The caller's environment is unchanged.
 
 Phoebus and the blueapi CLI wrappers require Podman or Docker. Phoebus also
 needs an X display. All cluster helpers accept `--help`.
