@@ -8,10 +8,10 @@ UID and primary GID, both `36261`.
 
 From a checkout of `t11-deployment`, generate the application. Run all the
 commands below in the same terminal. Set the UID and primary GID to `36261`,
-the IDs of the `k8s-t11-beamline` functional account. The script runs with
-`uv`, so load it first with `module load uv`:
+the IDs of the `k8s-t11-beamline` functional account:
 
 ```bash
+module load uv
 scripts/make-apps-test.py \
   --namespace t11-beamline \
   --argocd-cluster argus \
