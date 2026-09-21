@@ -43,20 +43,30 @@ container.
 
 ## A Service has no external IP
 
-A LoadBalancer Service that shows `<pending>` in `EXTERNAL-IP` has no address
-outside the cluster:
+The web Services (Blueapi's OAuth proxy, Keycloak and OPIs) are ClusterIP;
+`<none>` in `EXTERNAL-IP` is expected. Only the EPICS gateway needs an
+external IP. A gateway LoadBalancer showing `<pending>` has not received one:
 
 ```bash
 kubectl get services
 ```
 
-The Service reports no event and no error. On a K3s cluster, servicelb
-serves each LoadBalancer port on every node, so two Services cannot use the
-same port. An ingress controller also holds port 80. Give one of the clashing
-Services another port with a `services:` override in `apps-test.local.yaml`.
-The comments in `apps-test.template.yaml` show an example. Do not move
-`t11-keycloak` off port 8080, because the token issuer URL contains that
-port.
+Check the gateway Service's events and the cluster's available floating IPs.
+On K3s, also check for another gateway using the same node ports.
+
+## A local web URL does not connect
+
+Run `scripts/connect.sh <namespace>` against the workload cluster and leave
+it running. Use the same context, namespace and `T11_WEB_ADDRESS` for the
+other helpers. The default ports are 18080 (Blueapi), 8080 (Keycloak) and
+18081 (OPIs).
+
+If a port is already occupied, stop the conflicting process or select a
+different loopback address, for example `T11_WEB_ADDRESS=127.0.0.2`, in both
+terminals. If a forwarded Pod is replaced, the helper closes its session;
+rerun it to reconnect. Permission errors require namespace access to Pods,
+Services and `pods/portforward`. Do not change Keycloak's local port 8080:
+the Blueapi CLI's discovered issuer URL contains that port.
 
 ## A PV read fails
 

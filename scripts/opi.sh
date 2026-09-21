@@ -5,9 +5,9 @@
 #   scripts/opi.sh [options] [namespace] [-- phoebus args...]
 #
 # The epics-opis Pod serves the OPI PVC over http. The synoptic IOC writes
-# bl11t-synoptic/index.bob into that PVC. The script reads the external IPs of
-# the t11-epics-opis and t11-epics-gateways Services with kubectl, so point
-# kubectl at the cluster first, e.g. `module load argus`.
+# bl11t-synoptic/index.bob into that PVC. Run scripts/connect.sh in another
+# terminal to reach the OPI web server. CA/PVA still use the external IP of
+# t11-epics-gateways, including camera images.
 #
 # With --local FILE, Phoebus opens a local .bob file instead, e.g. a synoptic
 # being edited in a t11-services clone. Its folder is mounted into the
@@ -26,6 +26,7 @@ t11_prog=opi.sh
 t11_env_hint="OPIS and GATEWAY"
 # shellcheck source-path=SCRIPTDIR source=lib/cluster.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/cluster.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/web.sh"
 
 die() {
     t11_error "$@" || exit 1
@@ -36,6 +37,7 @@ usage() {
 Usage: scripts/opi.sh [options] [namespace] [-- phoebus args...]
 
 Open the t11 synoptic in Phoebus, with PVs from the cluster's EPICS gateway.
+Run scripts/connect.sh first, unless using --local or OPIS.
 
 Arguments:
   namespace             namespace of the t11 beamline (default: \$USER)
@@ -52,6 +54,7 @@ Environment:
   OPIS=<host:port>      epics-opis http server, skips its kubectl lookup
   GATEWAY=<host>        EPICS gateway, skips its kubectl lookup
   IMAGE=<image>         Phoebus container image (default: $image)
+  T11_WEB_ADDRESS      loopback address used by connect.sh (default 127.0.0.1)
 EOF
 }
 

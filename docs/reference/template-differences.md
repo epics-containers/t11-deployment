@@ -3,24 +3,29 @@
 t11 is based on two Copier templates: `services-template-helm` defines the
 services, and `deployment-template-argocd` defines their deployment. The additions
 below make t11 a portable, standalone test beamline that can run in different
-clusters using external IP addresses, without DNS registrations or central DLS
+clusters using one gateway external IP and local web port-forwards, without DNS registrations or central DLS
 services. The first two tables assess which additions could also benefit production
 beamlines through the templates. The final tables record t11-specific values and
 changes contributed upstream during this work.
 
-Reviewed 20 September 2026. Ordinary beamline substitutions and version-only
+Reviewed 20 September 2026; web access updated 21 September 2026. Ordinary beamline substitutions and version-only
 changes are omitted. Template candidates: **Yes** = broadly reusable;
 **For Review** = needs further assessment; **No** = not proposed for production templates.
 
 ## Services
+
+The comparisons use the baseline revisions below, with web-access updates
+from [t11-services #29](https://github.com/epics-containers/t11-services/pull/29)
+and [t11-deployment #38](https://github.com/epics-containers/t11-deployment/pull/38).
 
 **Versions compared:** [t11-services `191c256`](https://github.com/epics-containers/t11-services/tree/191c256)
 against [services-template-helm `8132d00`](https://github.com/epics-containers/services-template-helm/tree/8132d00).
 
 | Change | What t11 adds or changes | Template candidate |
 | --- | --- | --- |
-| DNS-independent browser login | [Blueapi's nginx sidecar](https://github.com/epics-containers/t11-services/blob/191c256/services/t11-blueapi/templates/keycloak-proxy.yaml) forwards Keycloak login through the oauth2-proxy external IP, preserves the internal token issuer and rewrites browser URLs to relative paths. | **No:** only useful alongside a dummy Keycloak. |
-| Keycloak admin access | [Keycloak](https://github.com/epics-containers/t11-services/tree/191c256/services/t11-keycloak) uses a LoadBalancer and leaves `KC_HOSTNAME` unset so its admin console works at the assigned IP. | **No:** local identity service replaces central DLS identity for simulation. |
+| DNS-independent browser login | [Blueapi's nginx sidecar](https://github.com/epics-containers/t11-services/blob/3334eba/services/t11-blueapi/templates/keycloak-proxy.yaml) forwards Keycloak login through the locally forwarded oauth2-proxy endpoint, preserves the internal token issuer and rewrites browser URLs to relative paths. | **No:** only useful alongside a dummy Keycloak. |
+| Keycloak admin access | [Keycloak](https://github.com/epics-containers/t11-services/tree/3334eba/services/t11-keycloak) uses ClusterIP and leaves `KC_HOSTNAME` unset so its admin console works through the local forward on port 8080. | **No:** local identity service replaces central DLS identity for simulation. |
+| One floating IP per test beamline | Blueapi's OAuth proxy, Keycloak and OPIs use ClusterIP and local kubectl port-forwards. Only the EPICS gateway retains a LoadBalancer; CA/PVA and camera images travel directly through it. | **No:** conserves scarce test-cluster floating IPs; production ingress and gateway arrangements have different requirements. |
 | Restart-safe Keycloak | The same chart imports the realm in a `postStart` hook on every start; a PVC preserves users and signing keys, with `Recreate` preventing concurrent H2 access. | **No:** useful for standalone test identity, but this `start-dev`/H2 setup is not a production identity service. |
 | Self-contained acquisition services | [Service charts](https://github.com/epics-containers/t11-services/tree/191c256/services) add local Keycloak, OPA, Numtracker and Tiled; blueapi uses these and local RabbitMQ instead of central endpoints. | **No:** standalone test deployments will use t11. |
 | Scan authorization and initialization | [Tiled](https://github.com/epics-containers/t11-services/tree/191c256/services/t11-tiled) retains its config mount and uses `PrincipalType.user`; OPA receives `ISSUER`; a Numtracker Job configures the instrument and scan paths. | **For Review:** check production service configs for the missing Tiled config mount, `PrincipalType.user` compatibility and OPA issuer setting; port affected fixes. Keep standalone initialization in t11. |
@@ -44,8 +49,8 @@ against [deployment-template-argocd 5.4.6](https://github.com/epics-containers/d
 | Test UID/GID overrides | [`testBeamline` helper](https://github.com/epics-containers/t11-deployment/blob/acf0518/apps/templates/_test_beamline.tpl) injects validated UID/GID and Pod-level `fsGroup` through configurable chart paths; explicit service overrides win. | **No:** production beamlines use assigned service-account IDs. This supports the personal deployment generator above, rather than a separate production template feature. |
 | Test PVC cleanup | [PostDelete hook](https://github.com/epics-containers/t11-deployment/blob/acf0518/apps/templates/test_beamline_teardown.yaml) removes retained PVCs tracked to this beamline's child apps, with retries, optional selector and dry run. | **No:** automatic PVC deletion is dangerous in production; keep this in disposable t11 deployments. |
 | Idle test teardown | [CronJob](../explanations/auto-teardown.md) deletes a test root app after a configurable period without Argo CD sync activity; the test template defaults to 24 hours. UI/PV use does not reset it. | **No:** automatic beamline teardown is dangerous in production; keep this in disposable t11 deployments. |
-| Non-DLS cluster setup | [Namespace RBAC](https://github.com/epics-containers/t11-deployment/tree/acf0518/non-dls-cluster) supplies gateway discovery permissions; instructions cover Argo CD prerequisites and alternate K3s ports. | **No:** this setup is only relevant to giles. Other non-DLS adopters should use this repo for tests and implement these prerequisites in their cluster infrastructure. |
-| Workstation access helpers | [Helper scripts](helper-scripts.md) discover Service addresses/ports, configure CA/PVA and launch Phoebus or a matching blueapi CLI container; Phoebus refreshes its image. | **No:** this access workflow targets non-hostNetwork deployments; DLS production uses hostNetwork. |
+| Non-DLS cluster setup | [Namespace RBAC](https://github.com/epics-containers/t11-deployment/tree/acf0518/non-dls-cluster) supplies gateway discovery permissions; instructions cover Argo CD prerequisites. ClusterIP web Services need no K3s node-port overrides. | **No:** this setup is only relevant to giles. Other non-DLS adopters should use this repo for tests and implement these prerequisites in their cluster infrastructure. |
+| Workstation access helpers | [Helper scripts](helper-scripts.md) manage local web forwards with `connect.sh`, check their context and namespace, discover the gateway address, configure CA/PVA and launch Phoebus or a matching blueapi CLI container; Phoebus refreshes its image. | **No:** this access workflow targets non-hostNetwork deployments; DLS production uses hostNetwork. |
 | End-to-end smoke test | [Smoke test](https://github.com/epics-containers/t11-deployment/blob/acf0518/scripts/smoke-test.sh) checks applications, Pods, gateway PVs, a blueapi scan and Tiled data, including separate cluster contexts. | **Yes — deployment:** add a production smoke-test script with configurable EPICS access, PVs, scan plan, session, credentials and expected data; retain separate cluster contexts. |
 | Documentation and development tooling | Sphinx reference/tutorials, Pages CI, a Helm/kubectl devcontainer and Renovate tool-version rules extend the deployment template's scaffold. | **No:** epics-containers documentation is centralized in the dev portal; keep this repo-specific setup in t11. |
 | Agent workflow notes | `.claude/` records service-branch testing and handover details; Git ignores local applications, kubeconfigs and worktrees. | **No:** developers rarely open production deployment repos, so these agent workflow notes are not useful there. |
@@ -65,8 +70,8 @@ chosen here for portability, isolation and disposable testing.
 | CPU and memory budgets | IOC CPU limits 250m, camera 1 CPU/1Gi, gateway 500m per container, blueapi 1 CPU/2Gi; RabbitMQ 1 CPU/1Gi with a 100m init-container limit. | Fits the personal namespace quota while allowing camera processing and RabbitMQ startup; production needs workload-specific sizing. |
 | Small supporting-service budgets | OPI, PVC helper and oauth2-proxy CPU limits 100m; Numtracker/OPA 200m; Tiled 500m. | Avoids oversized namespace defaults consuming the test quota. |
 | Ephemeral storage | Blueapi and RabbitMQ set 2Gi ephemeral-storage limits. | Explicit limits avoid the namespace's 1Gi default; blueapi's virtual environment previously caused eviction. |
-| IP-only exposure | Blueapi and oauth2 ingress disabled; oauth2-proxy, Keycloak and OPIs use LoadBalancer Services. RabbitMQ, Numtracker, Tiled and OPA stay ClusterIP. | Publishes only workstation entry points without registered DNS names or central ingress. |
-| Optional K3s ports | Test application examples override OPI `service.port: 8081` and oauth2 `service.portNumber: 8082`; Keycloak uses 8080. | Avoids node-port clashes with the ingress controller; these overrides are commented examples, not defaults. |
+| Gateway and web access | Only the EPICS gateway uses LoadBalancer. Blueapi and oauth2 ingress remain disabled; oauth2-proxy, Keycloak, OPIs, RabbitMQ, Numtracker, Tiled and OPA use ClusterIP. | Uses one floating IP per test beamline while keeping CA/PVA camera streams off the Kubernetes API. |
+| Local web ports | `connect.sh` forwards Blueapi to `127.0.0.1:18080`, Keycloak to `127.0.0.1:8080` and OPIs to `127.0.0.1:18081`; `T11_WEB_ADDRESS` selects another loopback address for a second beamline. | Requires no DNS registration or central ingress. K3s web node-port overrides are unnecessary; Keycloak keeps port 8080 for the CLI's issuer URL. |
 | Local service endpoints and telemetry | Blueapi uses local identity, Numtracker, Tiled and RabbitMQ endpoints; blueapi/Numtracker disable central Graylog, and Numtracker disables tracing. | Removes runtime dependencies on central DLS services. |
 | Development authentication | Local demo users, development secrets, RabbitMQ guest credentials, `cookie_secure: false` and relaxed OIDC checks. | Supports the dummy identity service and HTTP login; production uses managed credentials and its identity/security configuration. |
 | Test storage | Tiled uses in-memory SQLite for auth, catalogue and writable storage; Keycloak keeps H2 on a 1Gi PVC; Numtracker keeps SQLite on a PVC. | Scan catalogue/data are disposable, while signing keys and scan-number state survive Pod restarts. |

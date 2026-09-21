@@ -99,6 +99,18 @@ for how the timer and cleanup work.
 
 ## 3. Open the Phoebus UI
 
+In a second terminal, load the same cluster environment and run this from
+the deployment checkout:
+
+```bash
+module load argus
+scripts/connect.sh
+```
+
+Leave it running for the rest of the tutorial. It forwards the web Services
+to localhost; only the EPICS gateway uses a floating IP. CA/PVA and camera
+images continue to travel directly through the gateway.
+
 Launch Phoebus from your workstation terminal:
 
 ```bash
@@ -189,6 +201,8 @@ This unsets the variables configured above; it does not restore any custom
 values you had before sourcing the script.
 
 Delete your test beamline:
+
+First stop `scripts/connect.sh` with Ctrl-C in its terminal.
 
 ```bash
 kubectl delete application t11

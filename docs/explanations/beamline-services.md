@@ -100,6 +100,9 @@ without the central DLS services.
 
 ## Workstation access
 
-The gateway, OPI server, blueapi proxy and Keycloak have published addresses.
-Numtracker, Tiled, OPA and RabbitMQ are internal. `scripts/urls.sh` prints
-the published addresses; the helper scripts discover them automatically.
+Only the gateway has a LoadBalancer address, consuming one floating IP per
+test beamline at DLS. CA/PVA and camera streams use it directly.
+The OPI server, blueapi proxy and Keycloak use ClusterIP Services;
+`scripts/connect.sh` forwards them to localhost while you use the beamline.
+`scripts/urls.sh` prints those local URLs and the gateway address.
+Numtracker, Tiled, OPA and RabbitMQ remain internal.

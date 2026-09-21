@@ -17,9 +17,7 @@
 # done are remembered and not repeated:
 #   t11_check_namespace NAMESPACE sets t11_context to the kubectl context
 #   t11_gateway_host NAMESPACE    sets t11_gateway to the gateway host
-#   t11_opis_endpoint NAMESPACE   sets t11_opis to the epics-opis host:port
-# Both honour the GATEWAY=<host> and OPIS=<host:port> overrides, which skip
-# kubectl.
+# GATEWAY=<host> skips kubectl. Web endpoints are in lib/web.sh.
 
 # Gateway ports on the t11-epics-gateways Service
 t11_ca_port=9064
@@ -44,7 +42,7 @@ t11_error() {
 # fail, with a clear message, when kubectl cannot read the Services
 #   t11_check_cluster NAMESPACE SERVICE...
 t11_check_cluster() {
-    local namespace=$1 service todo=()
+    local namespace=$1 service found todo=()
     shift
     for service in "$@"; do
         [[ " ${_t11_checked[*]} " == *" $namespace/$service "* ]] || todo+=("$service")
@@ -54,8 +52,14 @@ t11_check_cluster() {
     t11_check_namespace "$namespace" || return
 
     for service in "${todo[@]}"; do
-        kubectl get service "$service" -n "$namespace" >/dev/null 2>&1 ||
-            t11_error "no Service '$service' in namespace '$namespace' (context '$t11_context'). Is the t11 test beamline deployed there?" || return
+        # Empty output means NotFound; authentication, transport and RBAC
+        # errors remain visible and must not be reported as a missing Service.
+        found=$(kubectl get service "$service" -n "$namespace" --ignore-not-found -o name) || {
+            t11_error "cannot read Service '$service' in namespace '$namespace' (context '$t11_context'); kubectl's error is above"
+            return 1
+        }
+        [[ -n $found ]] ||
+            t11_error "no Service '$service' in namespace '$namespace' (context '$t11_context'). Select the workload cluster where the beamline Pods run, which may differ from the Argo CD cluster." || return
         _t11_checked+=("$namespace/$service")
     done
 }
@@ -78,12 +82,14 @@ t11_check_namespace() {
     # Leave stderr on the terminal: when the token has expired, kubectl's
     # login plugin prints its browser prompt there and waits for the login
     t11_note "checking that context '$t11_context' can reach namespace '$namespace'. If your token has expired, kubectl asks you to log in"
-    local out
-    out=$(kubectl auth can-i get services -n "$namespace" --request-timeout=5s) || true
+    # A five-second request deadline also interrupts interactive device login.
+    # Use kubectl's default timeout so the user can complete authentication.
+    local out status=0
+    out=$(kubectl auth can-i get services -n "$namespace") || status=$?
     if grep -qx no <<<"$out"; then
         t11_error "context '$t11_context' cannot read Services in namespace '$namespace'. Check the namespace name and your access."
         return
-    elif ! grep -qx yes <<<"$out"; then
+    elif ((status != 0)) || ! grep -qx yes <<<"$out"; then
         t11_error "cannot reach the cluster for context '$t11_context'. Check the VPN or tunnel, and log in again if your token has expired. kubectl's error is above."
         return
     fi
@@ -109,22 +115,4 @@ t11_gateway_host() {
     t11_gateway=$(t11_service_field "$1" t11-epics-gateways '{.status.loadBalancer.ingress[0].ip}') || return
     [[ -n $t11_gateway ]] ||
         t11_error "t11-epics-gateways in namespace '$1' has no external IP yet"
-}
-
-# set t11_opis to host:port of the epics-opis http server, from OPIS or the
-# t11-epics-opis Service
-#   t11_opis_endpoint NAMESPACE
-t11_opis_endpoint() {
-    if [[ -n ${OPIS:-} ]]; then
-        t11_opis=$OPIS
-        return 0
-    fi
-    t11_check_cluster "$1" t11-epics-opis || return
-    t11_note "looking up the epics-opis server's address"
-    local ip port
-    ip=$(t11_service_field "$1" t11-epics-opis '{.status.loadBalancer.ingress[0].ip}') || return
-    port=$(t11_service_field "$1" t11-epics-opis '{.spec.ports[0].port}') || return
-    [[ -n $ip ]] ||
-        t11_error "t11-epics-opis in namespace '$1' has no external IP yet" || return
-    t11_opis=$ip:$port
 }

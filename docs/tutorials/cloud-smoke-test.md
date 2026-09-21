@@ -41,12 +41,6 @@ module load pollux
 scripts/smoke-test.sh t11-beamline
 ```
 
-```{warning}
-t11 uses 8 cluster IPs. In early testing, this was the resource
-most likely to be exhausted on Pollux. If deployment takes more than five
-minutes, check the status of the services.
-```
-
 Deploying from scratch takes around five minutes. The script waits for
 the applications on `argocd-test` and the pods on
 Pollux to become ready. It then reads IOC PVs through the gateway, runs a
@@ -54,18 +48,57 @@ five-reading Bluesky `count` plan, and checks that Tiled recorded a successful
 run. Success ends with `all checks passed` and exit status 0. If a check
 fails, see [Troubleshoot a t11 beamline](../how-to/troubleshoot-beamline.md).
 
-## 3. Tear down the beamline
+## 3. Keep the beamline running permanently (optional)
+
+By default, the test beamline deletes itself after 24 hours without an
+Argo CD sync. Running scans or smoke tests does not reset that timer.
+
+To keep it running until you explicitly remove it, edit
+`apps-test.local.yaml` and set
+`spec.source.helm.valuesObject.testBeamline.idleTeardown.enabled` to `false`:
+
+```yaml
+spec:
+  source:
+    helm:
+      valuesObject:
+        testBeamline:
+          idleTeardown:
+            enabled: false
+```
+
+This snippet shows the setting's location; keep the rest of your application
+file, including its cluster, namespace and UID/GID settings.
+
+Switch back to Telamon, where the root Argo CD Application lives, and apply
+the edited file:
+
+```bash
+module unload pollux
+module load telamon
+kubectl apply -f apps-test.local.yaml -n t11-beamline
+```
+
+Wait for Argo CD to sync the change. Automatic deletion is then disabled;
+manual teardown still removes the beamline and its test data. Keep this
+edited file for future deployments: rerunning `make-apps-test.py` regenerates
+it with automatic deletion enabled. To restore automatic deletion, set
+`enabled: true` and apply the file again.
+
+## 4. Tear down the beamline
 
 Delete the root application from `argocd-test`:
 
 ```bash
+module unload pollux
+module load telamon
 kubectl delete application t11 -n t11-beamline
 ```
 
 Argo CD removes the beamline services on Pollux. The teardown hook also
 deletes the beamline's persistent volume claims and their stored test data.
 
-If you do not tear it down manually, the test deployment automatically
+Unless you disabled automatic deletion above, the test deployment automatically
 tears itself down after 24 hours without an Argo CD sync. Running a smoke
 test does not reset that timer.
 
