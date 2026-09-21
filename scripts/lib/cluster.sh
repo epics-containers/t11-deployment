@@ -17,9 +17,7 @@
 # done are remembered and not repeated:
 #   t11_check_namespace NAMESPACE sets t11_context to the kubectl context
 #   t11_gateway_host NAMESPACE    sets t11_gateway to the gateway host
-#   t11_opis_endpoint NAMESPACE   sets t11_opis to the epics-opis host:port
-# Both honour the GATEWAY=<host> and OPIS=<host:port> overrides, which skip
-# kubectl.
+# GATEWAY=<host> skips kubectl. Web endpoints are in lib/web.sh.
 
 # Gateway ports on the t11-epics-gateways Service
 t11_ca_port=9064
@@ -109,22 +107,4 @@ t11_gateway_host() {
     t11_gateway=$(t11_service_field "$1" t11-epics-gateways '{.status.loadBalancer.ingress[0].ip}') || return
     [[ -n $t11_gateway ]] ||
         t11_error "t11-epics-gateways in namespace '$1' has no external IP yet"
-}
-
-# set t11_opis to host:port of the epics-opis http server, from OPIS or the
-# t11-epics-opis Service
-#   t11_opis_endpoint NAMESPACE
-t11_opis_endpoint() {
-    if [[ -n ${OPIS:-} ]]; then
-        t11_opis=$OPIS
-        return 0
-    fi
-    t11_check_cluster "$1" t11-epics-opis || return
-    t11_note "looking up the epics-opis server's address"
-    local ip port
-    ip=$(t11_service_field "$1" t11-epics-opis '{.status.loadBalancer.ingress[0].ip}') || return
-    port=$(t11_service_field "$1" t11-epics-opis '{.spec.ports[0].port}') || return
-    [[ -n $ip ]] ||
-        t11_error "t11-epics-opis in namespace '$1' has no external IP yet" || return
-    t11_opis=$ip:$port
 }

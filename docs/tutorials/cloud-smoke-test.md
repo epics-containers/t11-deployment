@@ -41,12 +41,6 @@ module load pollux
 scripts/smoke-test.sh t11-beamline
 ```
 
-```{warning}
-t11 uses 8 cluster IPs. In early testing, this was the resource
-most likely to be exhausted on Pollux. If deployment takes more than five
-minutes, check the status of the services.
-```
-
 Deploying from scratch takes around five minutes. The script waits for
 the applications on `argocd-test` and the pods on
 Pollux to become ready. It then reads IOC PVs through the gateway, runs a

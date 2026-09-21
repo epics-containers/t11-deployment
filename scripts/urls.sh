@@ -1,14 +1,12 @@
 #!/bin/bash
 #
-# Print how to reach each service that a t11 test beamline publishes outside
-# the cluster: a URL for each web service, and host:port for anything else.
+# Print local web URLs and published addresses for a t11 test beamline.
 #
 #   scripts/urls.sh [namespace]
 #
-# The external IPs come from the cluster and change when a Service is
-# recreated, so the script reads them with kubectl every time. It lists every
-# LoadBalancer Service, every Service with externalIPs, and every Ingress in
-# the namespace, so services published later show up with no change here.
+# Web URLs require scripts/connect.sh in another terminal. Gateway addresses
+# come from the cluster; additional externally published services are listed
+# too.
 # On argus it then prints the Argo CD and Headlamp pages for the namespace.
 # Point kubectl at the cluster first, e.g. `module load argus`.
 
@@ -18,13 +16,13 @@ t11_prog=urls.sh
 t11_env_hint=""
 # shellcheck source-path=SCRIPTDIR source=lib/cluster.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/cluster.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/web.sh"
 
 usage() {
     cat <<EOF
 Usage: scripts/urls.sh [namespace]
 
-Print the address of each service that the t11 beamline publishes outside
-the cluster, one per line:
+Print local web URLs (run scripts/connect.sh first) and external addresses:
   <service>  <url or host:port>
 
 On argus, also print the Argo CD and Headlamp pages for the namespace.
@@ -34,6 +32,9 @@ Arguments:
 
 Options:
   -h, --help            show this help
+
+Environment:
+  T11_WEB_ADDRESS      loopback address used by connect.sh (default 127.0.0.1)
 EOF
 }
 
@@ -54,6 +55,7 @@ for arg in "$@"; do
     esac
 done
 namespace=${namespace:-${USER:-$(id -un)}}
+t11_web_config || exit 1
 
 t11_check_namespace "$namespace" || exit 1
 echo >&2
@@ -104,7 +106,22 @@ t11_note "listing the Services and Ingresses in namespace '$namespace'"
 # the separator goes with the notes, so stdout keeps one address per line
 echo --- >&2
 services=$(kubectl get services -n "$namespace" -o go-template="$service_template")
+web_seen=" "
 while IFS='|' read -r name type lb external port_name port app_protocol; do
+    case $name in
+    t11-blueapi-oauth2) local_port=$t11_blueapi_port ;;
+    t11-keycloak) local_port=$t11_keycloak_port ;;
+    t11-epics-opis) local_port=$t11_opis_port ;;
+    *) local_port="" ;;
+    esac
+    if [[ -n $local_port ]]; then
+        if [[ $web_seen != *" $name "* ]]; then
+            row "$name" "http://$t11_web_address:$local_port/"
+            web_seen+="$name "
+            found=1
+        fi
+        continue
+    fi
     # a metrics endpoint is not a service for people, e.g. oauth2-proxy's
     [[ $port_name == *metrics* ]] && continue
     # ca-server-tcp and ca-server-udp are one port: name it ca-server
@@ -133,6 +150,9 @@ while IFS='|' read -r name type lb external port_name port app_protocol; do
     fi
     found=1
 done <<<"$services"
+if [[ $web_seen != " " ]]; then
+    t11_note "web URLs require T11_WEB_ADDRESS=$t11_web_address scripts/connect.sh '$namespace' in another terminal"
+fi
 
 # a user may not be allowed to list Ingresses; that is not an error here
 ingresses=$(kubectl get ingresses -n "$namespace" -o go-template="$ingress_template" 2>/dev/null) || true

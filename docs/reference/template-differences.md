@@ -14,6 +14,10 @@ changes are omitted. Template candidates: **Yes** = broadly reusable;
 
 ## Services
 
+The comparisons below describe the pinned revisions. Current t11 web
+Services use ClusterIP and `scripts/connect.sh` for workstation access;
+only the EPICS gateway retains a LoadBalancer.
+
 **Versions compared:** [t11-services `191c256`](https://github.com/epics-containers/t11-services/tree/191c256)
 against [services-template-helm `8132d00`](https://github.com/epics-containers/services-template-helm/tree/8132d00).
 

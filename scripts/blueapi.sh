@@ -8,13 +8,10 @@
 #   scripts/blueapi.sh -- login
 #   scripts/blueapi.sh -- controller run --ws -i cm12345-1 count '{"detectors":["det"],"num":5}'
 #
-# The CLI talks to blueapi through the t11-blueapi-oauth2 LoadBalancer, and
-# logs in to keycloak as t11-keycloak:8080. That name only resolves inside the
-# cluster, but every token must carry it as its issuer, so the container maps
-# it to the external IP of the t11-keycloak Service. The login link the CLI
-# prints is rewritten to that IP, so a browser on this machine can open it.
-# The script reads both IPs with kubectl, so point kubectl at the cluster
-# first, e.g. `module load argus`.
+# Run scripts/connect.sh in another terminal first. The CLI uses the local
+# Blueapi and Keycloak forwards. Tokens retain the t11-keycloak:8080 issuer:
+# the container maps that name to the forwarded address, and the printed
+# login link is rewritten for the workstation browser.
 #
 # The login is cached in ~/.cache/t11-blueapi/<namespace>, so log in once and
 # then run plans. The image is the one the beamline's blueapi runs, so the CLI
@@ -33,6 +30,7 @@ t11_prog=blueapi.sh
 t11_env_hint="BLUEAPI, KEYCLOAK and IMAGE"
 # shellcheck source-path=SCRIPTDIR source=lib/cluster.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/cluster.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/web.sh"
 
 die() {
     t11_error "$@" || exit 1
@@ -44,6 +42,7 @@ Usage: scripts/blueapi.sh [options] [namespace] -- blueapi args...
 
 Run the blueapi CLI against the t11 beamline's blueapi, logged in through its
 keycloak.
+Requires scripts/connect.sh for this namespace in another terminal.
 
 Arguments:
   namespace             namespace of the t11 beamline (default: \$USER)
@@ -60,6 +59,7 @@ Environment:
   BLUEAPI=<host[:port]> t11-blueapi-oauth2 proxy, skips its kubectl lookup
   KEYCLOAK=<host>       t11-keycloak Service, skips its kubectl lookup
   IMAGE=<image>         blueapi image, skips its kubectl lookup
+  T11_WEB_ADDRESS      loopback address used by connect.sh (default 127.0.0.1)
 EOF
 }
 
@@ -115,24 +115,11 @@ if ((${#services[@]})); then
     t11_check_cluster "$namespace" "${services[@]}" || exit 1
 fi
 
-# the external IP of a LoadBalancer Service
-external_ip() {
-    local ip
-    t11_note "looking up the external IP of $1"
-    ip=$(t11_service_field "$namespace" "$1" '{.status.loadBalancer.ingress[0].ip}') || return
-    [[ -n $ip ]] || t11_error "$1 in namespace '$namespace' has no external IP yet" || return
-    echo "$ip"
-}
-
-if [[ -z ${BLUEAPI:-} ]]; then
-    BLUEAPI=$(external_ip t11-blueapi-oauth2) || exit 1
-    # outside DLS the proxy can move off port 80, which an ingress controller holds
-    port=$(t11_service_field "$namespace" t11-blueapi-oauth2 '{.spec.ports[?(@.name=="http")].port}') || exit 1
-    [[ -z $port || $port == 80 ]] || BLUEAPI=$BLUEAPI:$port
+if [[ -z ${BLUEAPI:-} || -z ${KEYCLOAK:-} ]]; then
+    t11_require_web_connection "$namespace" || exit 1
 fi
-if [[ -z ${KEYCLOAK:-} ]]; then
-    KEYCLOAK=$(external_ip t11-keycloak) || exit 1
-fi
+BLUEAPI=${BLUEAPI:-$t11_web_address:$t11_blueapi_port}
+KEYCLOAK=${KEYCLOAK:-$t11_web_address}
 if [[ -z ${IMAGE:-} ]]; then
     t11_check_namespace "$namespace" || exit 1
     t11_note "looking up the image that the beamline's blueapi runs"
@@ -164,6 +151,7 @@ EOF
 
 args=(
     --rm -i
+    --network host
     --add-host "t11-keycloak:$KEYCLOAK"
     --security-opt=label=disable
     -e HOME=/tmp
