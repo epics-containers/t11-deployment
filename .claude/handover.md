@@ -70,7 +70,7 @@ items when they are done.
   `t11-beamline`. `p47-beamline-agent-hgv27681.kubeconfig` sits untracked in
   the t11-deployment checkout; it holds credentials and must not be
   committed.
-- **Elsewhere:** services-template-helm#149 (review TEMPLATE-PROMOTION.md),
+- **Elsewhere:** services-template-helm#149 (review `docs/reference/template-differences.md`),
   ec-helm-charts#117 (epics-opis Service options), podbench#279.
 
 ## Tools

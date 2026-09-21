@@ -66,7 +66,8 @@ Every change to a t11 service follows these steps, in order.
 
 3. **Open a PR** in the service repo as soon as the branch works, so that the
    change is not forgotten. Use `gh api` REST calls, not `gh pr create`. Add
-   a `TEMPLATE-PROMOTION.md` entry when the repo has one.
+   an entry to `docs/reference/template-differences.md` in t11-deployment
+   when the change affects the template comparison or standalone values.
 
 4. **Later, clean up**, when the user asks: merge the PR, remove the
    service's override from `apps-test.local.yaml`, and apply the file again
