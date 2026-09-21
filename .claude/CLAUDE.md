@@ -20,7 +20,8 @@ Service work follows the `test-service-change` skill.
   `helm template` diff.
 - Use `gh api` REST, because `gh pr view` and `gh pr create` fail. Edit
   PR and issue bodies in a file and upload them with `-F body=@file`.
-- Edit text with Read, Edit and Write, not sed or inline python.
+- Edit text with Read, Edit and Write, not sed or inline python. Appending
+  with `cat >>` is fine, for logs and other append-only files.
 - Give heavy work to subagents with a self-contained brief.
 
 ## Reaching argus from claude-sandbox
