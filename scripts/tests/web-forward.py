@@ -25,6 +25,9 @@ if a[:2] == ["config", "current-context"]:
     print(os.environ.get("TEST_CONTEXT", "test-cluster"))
 elif a[:2] == ["auth", "can-i"]:
     print("yes")
+    if os.environ.get("TEST_AUTH_ERROR"):
+        print("authentication request failed", file=sys.stderr)
+        sys.exit(1)
 elif "port-forward" in a:
     service = next(x for x in a if x.startswith("service/"))
     with open(os.environ["TEST_CALLS"], "a") as f:
@@ -40,8 +43,15 @@ elif "port-forward" in a:
 elif a[:2] == ["get", "statefulset"]:
     print("test-blueapi-image")
 elif a[:2] == ["get", "service"]:
+    if os.environ.get("TEST_SERVICE_ERROR"):
+        print(os.environ["TEST_SERVICE_ERROR"], file=sys.stderr)
+        sys.exit(1)
+    if os.environ.get("TEST_SERVICE_MISSING"):
+        sys.exit(0)
     if "-o" in a:
-        if "loadBalancer" in a[-1]:
+        if a[-1] == "name":
+            print("service/" + a[2])
+        elif "loadBalancer" in a[-1]:
             print("192.0.2.10")
         else:
             print(8080 if a[2] == "t11-keycloak" else 8082 if a[2] == "t11-blueapi-oauth2" else 8081)
@@ -179,6 +189,28 @@ class WebForwardTests(unittest.TestCase):
                                      env=dict(self.env, T11_WEB_ADDRESS=address))
             self.assertNotEqual(result.returncode, 0)
             self.assertFalse((self.path / "calls").exists())
+
+    def test_service_lookup_errors_are_not_missing_services(self):
+        for error in ("Unauthorized", "Forbidden", "context deadline exceeded"):
+            result = self.run_script("connect.sh", "beamline",
+                                     env=dict(self.env, TEST_SERVICE_ERROR=error))
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(error, result.stderr)
+            self.assertIn("cannot read Service", result.stderr)
+            self.assertNotIn("no Service", result.stderr)
+        missing = self.run_script("connect.sh", "beamline",
+                                  env=dict(self.env, TEST_SERVICE_MISSING="1"))
+        self.assertNotEqual(missing.returncode, 0)
+        self.assertIn("Select the workload cluster", missing.stderr)
+        self.assertFalse((self.path / "calls").exists())
+
+    def test_failed_auth_check_stops_even_if_it_prints_yes(self):
+        result = self.run_script("connect.sh", "beamline",
+                                 env=dict(self.env, TEST_AUTH_ERROR="1"))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("authentication request failed", result.stderr)
+        self.assertIn("cannot reach the cluster", result.stderr)
+        self.assertFalse((self.path / "calls").exists())
 
 
 if __name__ == "__main__":
