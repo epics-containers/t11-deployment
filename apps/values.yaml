@@ -28,12 +28,12 @@ testBeamline:
   # path when a new chart pins the production account.
   # container level: gets runAsUser and runAsGroup
   securityContextPaths:
-    - ioc-instance.securityContext
+  - ioc-instance.securityContext
   # Pod level: also gets fsGroup, so shared volumes are writable by gid
   podSecurityContextPaths:
-    - ioc-instance.podSecurityContext
+  - ioc-instance.podSecurityContext
     # the gateway chart renders securityContext at Pod level
-    - epics-gateways.securityContext
+  - epics-gateways.securityContext
   # when you delete the root app, a PostDelete hook deletes the PVCs that
   # Argo CD kept for its child apps. Other PVCs in the namespace are kept.
   teardown:
@@ -42,9 +42,9 @@ testBeamline:
     dryRun: false
     # empty: create a ServiceAccount, Role and RoleBinding for the hook
     # set: run the hook as this existing ServiceAccount and create no RBAC
-    serviceAccountName: ""
+    serviceAccountName: ''
     # optional label selector that narrows the PVCs considered
-    pvcSelector: ""
+    pvcSelector: ''
     # needs a shell as well as kubectl
     image: docker.io/alpine/k8s:1.34.11
   # delete the root app, and so the whole test beamline, when none of its
@@ -55,12 +55,12 @@ testBeamline:
     enabled: false
     idleHours: 24
     # when to check, as a CronJob schedule
-    schedule: "7 * * * *"
+    schedule: 7 * * * *
     # true: log the decision, delete nothing
     dryRun: false
     # empty: create a ServiceAccount, Role and RoleBinding for the CronJob
     # set: run it as this existing ServiceAccount and create no RBAC
-    serviceAccountName: ""
+    serviceAccountName: ''
     # needs a shell as well as kubectl
     image: docker.io/alpine/k8s:1.34.11
 
@@ -105,4 +105,4 @@ services:
   bl11t-ea-test-01:
     description: Test IOC with A, B and SUM PVs
   bl11t-mo-sim-01:
-    description: Simulation of 2 motors
+    description: it really is a simulation!
