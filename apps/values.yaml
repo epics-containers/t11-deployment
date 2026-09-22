@@ -106,3 +106,5 @@ services:
     description: Test IOC with A, B and SUM PVs
   bl11t-mo-sim-01:
     description: 2 simulation motors
+    enabled: true
+    targetRevision: test
