@@ -75,20 +75,34 @@ services:
   #     ---- fields for ioc-instance (and other future cooperating charts)
   #     enabled: set to false to stop a service
   #     labels: custom labels to apply to the service resources
+  #     description: free text shown by `ec ps` and argocd-monitor
   #     values: TBA - custom values to pass to the helm chart when deploying the service
   #     ----
 
   t11-epics-pvcs:
+    description: Shared volumes for IOC data, config and runtime files
   t11-epics-opis:
+    description: Web server for the beamline's Phoebus OPI screens
   t11-epics-gateways:
+    description: CA and PVA gateways into the beamline IOCs
   t11-blueapi:
+    description: Bluesky REST API for running plans
   t11-keycloak:
+    description: Local identity provider for test users
   t11-numtracker:
+    description: Scan number and data path service
   t11-opa:
+    description: Policy engine that authorises blueapi requests
   t11-rabbitmq:
+    description: Message bus for blueapi events
   t11-tiled:
+    description: Data server that stores and serves scan data
 
   bl11t-synoptic:
+    description: Generated synoptic and component screens
   bl11t-di-cam-01:
+    description: Simulated area detector camera
   bl11t-ea-test-01:
+    description: Test IOC with A, B and SUM PVs
   bl11t-mo-sim-01:
+    description: Simulation of 2 motors
