@@ -1,5 +1,13 @@
 # t11 deployment
 
+## Branching Strategy
+
+NOTE: main-work-branch is protected and used for development of this repo
+      main is where ec pushes changes to and is not protected
+
+
+## Overview
+
 Argo CD deployment for t11, the simulation beamline at Diamond Light Source.
 Deploy the services in [t11-services](https://github.com/epics-containers/t11-services)
 as a personal test beamline or a shared instance.
