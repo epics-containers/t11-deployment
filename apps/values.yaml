@@ -103,7 +103,6 @@ services:
   bl11t-di-cam-01:
     description: Simulated area detector camera
   bl11t-ea-test-01:
-    description: Test IOC with A, B and SUM PVs
   bl11t-mo-sim-01:
     description: 2 simulation motors
     enabled: true
