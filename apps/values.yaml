@@ -105,6 +105,10 @@ services:
   bl11t-ea-test-01:
   bl11t-ea-fastcs-01:
     description: fastcs-example IOC with a tickit temp controller simulator
+  bl11t-ea-temp-01:
+    description: streamdevice E2E instance for lakeshore331, no device attached
+  bl11t-ea-multi-01:
+    description: streamdevice E2E instance for GR150 and ETLdetector simulation, no device attached
   bl11t-mo-sim-01:
     description: 2 simulation motors
     enabled: true
