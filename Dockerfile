@@ -5,7 +5,7 @@ FROM ghcr.io/diamondlightsource/ubuntu-devcontainer:resolute AS developer
 # It supports servers one minor version either side, and argus runs 1.35, so
 # renovate.json holds it below 1.37
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-ARG KUBECTL_VERSION=v1.36.4
+ARG KUBECTL_VERSION=v1.36.5
 ARG TARGETARCH
 RUN url=https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH:-amd64}/kubectl && \
     curl -fsSLo /usr/local/bin/kubectl "$url" && \
