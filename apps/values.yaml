@@ -103,6 +103,8 @@ services:
   bl11t-di-cam-01:
     description: Simulated area detector camera
   bl11t-ea-test-01:
+  bl11t-ea-fastcs-01:
+    description: fastcs-example IOC with a tickit temp controller simulator
   bl11t-mo-sim-01:
     description: 2 simulation motors
     enabled: true

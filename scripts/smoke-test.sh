@@ -85,6 +85,8 @@ troubleshoot_url=https://epics-containers.github.io/t11-deployment/how-to/troubl
 declare -A ioc_pvs=(
     # the synoptic serves the techui <prefix>:STA status records
     [bl11t-synoptic]=BL11T-DI-CAM-01:STA
+    # fastcs has no :UPTIME
+    [bl11t-ea-fastcs-01]=BL11T-EA-FASTCS-01:Power
 )
 
 # the value of an option, or an error when it is missing
