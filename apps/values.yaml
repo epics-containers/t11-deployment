@@ -28,12 +28,12 @@ testBeamline:
   # path when a new chart pins the production account.
   # container level: gets runAsUser and runAsGroup
   securityContextPaths:
-  - ioc-instance.securityContext
+    - ioc-instance.securityContext
   # Pod level: also gets fsGroup, so shared volumes are writable by gid
   podSecurityContextPaths:
-  - ioc-instance.podSecurityContext
+    - ioc-instance.podSecurityContext
     # the gateway chart renders securityContext at Pod level
-  - epics-gateways.securityContext
+    - epics-gateways.securityContext
   # when you delete the root app, a PostDelete hook deletes the PVCs that
   # Argo CD kept for its child apps. Other PVCs in the namespace are kept.
   teardown:
@@ -102,7 +102,7 @@ services:
     description: Generated synoptic and component screens
   bl11t-di-cam-01:
     description: Simulated area detector camera
-  bl11t-ea-test-01:
+  bl11t-ea-test-01: {}
   bl11t-ea-fastcs-01:
     description: fastcs-example IOC with a tickit temp controller simulator
   bl11t-ea-temp-01:
