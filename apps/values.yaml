@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://github.com/epics-containers/ec-helm-charts/releases/download/5.11.0/argocd-apps.schema.json
+# yaml-language-server: $schema=https://github.com/epics-containers/ec-helm-charts/releases/download/5.14.0-beta.1/argocd-apps.schema.json
 
 # This file configures an ArgoCD app of apps that represent a
 # group of beamline or accelerator IOCs and services. The configuration of the
@@ -16,6 +16,17 @@ source:
   repoURL: https://github.com/epics-containers/t11-services
   targetRevision: main
 
+# One targetRevision per line. A service with no `group` (Controls
+# IOCs) follows source.targetRevision above. A service with `group: daq` or
+# `group: techui` follows the matching line here instead, so moving one
+# line here moves every service in that team's line at once.
+# Add your own lines as needed, e.g. `motion-fix: fix-motor-timeouts` with
+# `group: motion-fix` on a set of IOCs to put them on a branch together.
+# A `group` with no matching entry here fails the render.
+versions:
+  daq: main
+  techui: main
+
 # Opt-in profile for a test deployment of the beamline (issue #3).
 # Leave disabled here. Enable it in the valuesObject of your root app, see
 # apps-test.yaml. See apps/templates/_test_beamline.tpl for how it works.
@@ -28,12 +39,12 @@ testBeamline:
   # path when a new chart pins the production account.
   # container level: gets runAsUser and runAsGroup
   securityContextPaths:
-  - ioc-instance.securityContext
+    - ioc-instance.securityContext
   # Pod level: also gets fsGroup, so shared volumes are writable by gid
   podSecurityContextPaths:
-  - ioc-instance.podSecurityContext
+    - ioc-instance.podSecurityContext
     # the gateway chart renders securityContext at Pod level
-  - epics-gateways.securityContext
+    - epics-gateways.securityContext
   # when you delete the root app, a PostDelete hook deletes the PVCs that
   # Argo CD kept for its child apps. Other PVCs in the namespace are kept.
   teardown:
@@ -67,17 +78,24 @@ testBeamline:
 services:
   # Each item is of the form:
   #   service: service name as it appears in K8S (statefulset/deployment name)
-  #     targetRevision: optional override for targetRevision above
+  #     group: optional line from `versions` above to follow instead of
+  #            source.targetRevision, e.g. "daq", "techui" or one of your
+  #            own. Controls services take no group.
+  #     targetRevision: optional override for targetRevision above, or for
+  #            the group's line above if `group` is set
   #     repoURL: optional override for git repo to source the helm chart from
   #            the path is always services/<service> within that repo
   #     removed: set to true to remove the service from the cluster
-  #     removed: set to true to remove the service from the cluster
+  #     valuesObject: helm values for this service, overriding its values files
+  #     valuesFiles: values files for this service, relative to services/<service>;
+  #            replaces the default list [../values.yaml, values.yaml]
   #     ---- fields for ioc-instance (and other future cooperating charts)
-  #     enabled: set to false to stop a service
+  #     enabled: set to false to stop a service (ioc-instance chart only for now)
   #     labels: custom labels to apply to the service resources
-  #     description: free text shown by `ec ps` and argocd-monitor
-  #     values: TBA - custom values to pass to the helm chart when deploying the service
   #     ----
+  # e.g. a Data Acquisition service:
+  #   t11-blueapi:
+  #     group: daq
 
   t11-epics-pvcs:
     description: Shared volumes for IOC data, config and runtime files
@@ -102,7 +120,7 @@ services:
     description: Generated synoptic and component screens
   bl11t-di-cam-01:
     description: Simulated area detector camera
-  bl11t-ea-test-01:
+  bl11t-ea-test-01: {}
   bl11t-ea-fastcs-01:
     description: fastcs-example IOC with a tickit temp controller simulator
   bl11t-ea-temp-01:
