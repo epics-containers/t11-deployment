@@ -130,4 +130,3 @@ services:
   bl11t-mo-sim-01:
     description: 2 simulation motors
     enabled: true
-    targetRevision: test
