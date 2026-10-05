@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://github.com/epics-containers/ec-helm-charts/releases/download/5.14.0-beta.1/argocd-apps.schema.json
+# yaml-language-server: $schema=https://github.com/epics-containers/ec-helm-charts/releases/download/5.14.0/argocd-apps.schema.json
 
 # This file configures an ArgoCD app of apps that represent a
 # group of beamline or accelerator IOCs and services. The configuration of the
@@ -105,19 +105,26 @@ services:
     description: CA and PVA gateways into the beamline IOCs
   t11-blueapi:
     description: Bluesky REST API for running plans
+    group: daq
   t11-keycloak:
     description: Local identity provider for test users
+    group: daq
   t11-numtracker:
     description: Scan number and data path service
+    group: daq
   t11-opa:
     description: Policy engine that authorises blueapi requests
+    group: daq
   t11-rabbitmq:
     description: Message bus for blueapi events
+    group: daq
   t11-tiled:
     description: Data server that stores and serves scan data
 
+    group: daq
   bl11t-synoptic:
     description: Generated synoptic and component screens
+    group: techui
   bl11t-di-cam-01:
     description: Simulated area detector camera
   bl11t-ea-test-01: {}
