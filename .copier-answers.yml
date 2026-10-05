@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: 5.5.0-beta.2
+_commit: 5.5.0
 _src_path: https://github.com/epics-containers/deployment-template-argocd
 argocd_cluster: argus
 argocd_server: argocd.diamond.ac.uk
