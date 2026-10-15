@@ -15,7 +15,7 @@ RUN url=https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH:-amd
 # helm, for `helm template` diffs of the charts. Argo CD renders them with
 # Helm 3, so Renovate keeps this on 3.x
 # renovate: datasource=github-releases depName=helm/helm
-ARG HELM_VERSION=v3.22.0
+ARG HELM_VERSION=v3.22.1
 RUN file=helm-${HELM_VERSION}-linux-${TARGETARCH:-amd64}.tar.gz && \
     cd "$(mktemp -d)" && \
     curl -fsSLO "https://get.helm.sh/$file" && \
